@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chọn và gửi (1 lần)</title>
+  <style>
+    :root{ --bg:#f3f4f6; --card:#fff; --text:#111827; --muted:#6b7280; --line:#e5e7eb; }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+    .wrap{max-width:760px;margin:24px auto;padding:0 14px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 25px rgba(0,0,0,.06);padding:16px}
+    h1{margin:0 0 6px;font-size:18px}
+    .desc{margin:0 0 14px;color:var(--muted);font-size:13px;line-height:1.4}
+    .checks{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media (max-width:640px){ .checks{grid-template-columns:1fr} }
+    .check{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--line);border-radius:12px;background:#fff}
+    .check input{width:18px;height:18px}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    button{border:0;border-radius:12px;padding:10px 14px;cursor:pointer;font-weight:700}
+    .btn{background:#0f172a;color:#fff}
+    .btn2{background:#fff;border:1px solid var(--line);color:var(--text)}
+    .status{margin-top:10px;font-size:14px;font-weight:700}
+    .mono{margin-top:6px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px;color:var(--muted)}
+    .disabled{opacity:.6;pointer-events:none}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" id="card">
+    <h1>Chọn giá trị và gửi (chỉ 1 lần)</h1>
+    <p class="desc">
+      Tick 1 hoặc nhiều giá trị rồi bấm <b>Xác nhận gửi</b>. Sau khi gửi thành công, thiết bị sẽ bị khóa gửi lại.
+    </p>
+
+    <div class="checks" id="checkList">
+      <!-- ✅ sửa danh sách tại đây -->
+      <label class="check"><input type="checkbox" value="Gia tri 1"><span>Gia tri 1</span></label>
+      <label class="check"><input type="checkbox" value="Gia tri 2"><span>Gia tri 2</span></label>
+      <label class="check"><input type="checkbox" value="Gia tri 3"><span>Gia tri 3</span></label>
+      <label class="check"><input type="checkbox" value="Gia tri 4"><span>Gia tri 4</span></label>
+      <label class="check"><input type="checkbox" value="Gia tri 5"><span>Gia tri 5</span></label>
+      <label class="check"><input type="checkbox" value="Gia tri 6"><span>Gia tri 6</span></label>
+    </div>
+
+    <div class="actions">
+      <button class="btn" id="btnSubmit">Xác nhận gửi</button>
+      <button class="btn2" id="btnClear">Bỏ chọn</button>
+    </div>
+
+    <div class="status" id="status"></div>
+    <div class="mono" id="deviceBox"></div>
+  </div>
+</div>
+
+<script>
+  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbz0tWDVqXl92pmfjz17fxb0hWOdQfffrmmeEBEPu8WzEvu8rk-TMcHiXWE_dygmoqCQDw/exec";
+
+  // khóa theo thiết bị
+  const LS_DEVICE_ID = "one_send_device_id_v1";
+  const LS_LOCKED   = "one_send_locked_v1";
+
+  const $ = (id)=>document.getElementById(id);
+
+  function getOrCreateDeviceId(){
+    let id = localStorage.getItem(LS_DEVICE_ID);
+    if(!id){
+      id = "dev_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2,10);
+      localStorage.setItem(LS_DEVICE_ID, id);
+    }
+    return id;
+  }
+
+  function isLocked(){ return localStorage.getItem(LS_LOCKED) === "1"; }
+  function setLocked(v){ localStorage.setItem(LS_LOCKED, v ? "1" : "0"); }
+
+  function setStatus(msg, ok=true){
+    $("status").textContent = msg;
+    $("status").style.color = ok ? "#16a34a" : "#dc2626";
+  }
+
+  function getSelected(){
+    return [...document.querySelectorAll('#checkList input[type="checkbox"]:checked')].map(x=>x.value);
+  }
+
+  function setUIBlocked(block){
+    // block = true => khóa toàn bộ UI chọn/gửi
+    $("card").classList.toggle("disabled", block);
+  }
+
+  async function postToSheet(payload){
+    const res = await fetch(WEBAPP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    });
+    return res.json();
+  }
+
+  // init
+  const deviceId = getOrCreateDeviceId();
+  $("deviceBox").textContent = "deviceId: " + deviceId;
+
+  if (isLocked()){
+    setStatus("Thiết bị này đã gửi 1 lần rồi nên bị khóa.", false);
+    setUIBlocked(true);
+  }
+
+  $("btnClear").addEventListener("click", ()=>{
+    document.querySelectorAll('#checkList input[type="checkbox"]').forEach(x=>x.checked=false);
+    setStatus("Đã bỏ chọn.", true);
+  });
+
+  $("btnSubmit").addEventListener("click", async ()=>{
+    try{
+      if(WEBAPP_URL.includes("PASTE_YOUR_WEBAPP_URL_HERE")){
+        setStatus("Bạn chưa dán WEBAPP_URL.", false);
+        return;
+      }
+
+      // ✅ chặn ngay tại client
+      if(isLocked()){
+        setStatus("Thiết bị đã gửi 1 lần. Không thể gửi lại.", false);
+        setUIBlocked(true);
+        return;
+      }
+
+      const values = getSelected();
+      if(values.length === 0){
+        setStatus("Bạn cần chọn ít nhất 1 giá trị.", false);
+        return;
+      }
+
+      // xác nhận trước khi gửi
+      const ok = confirm("Xác nhận gửi các giá trị đã chọn?\n\n- " + values.join("\n- "));
+      if(!ok) return;
+
+      $("btnSubmit").disabled = true;
+      setStatus("Đang gửi...", true);
+
+      const data = await postToSheet({ deviceId, values });
+
+      if(data && data.ok){
+        // ✅ khóa sau khi gửi thành công
+        setLocked(true);
+        setStatus("Gửi thành công. Thiết bị đã bị khóa.", true);
+        setUIBlocked(true);
+      } else {
+        // ✅ nếu server báo blocked thì cũng khóa client luôn
+        if(data && data.blocked){
+          setLocked(true);
+          setUIBlocked(true);
+        }
+        setStatus((data && (data.message || data.error)) ? (data.message || data.error) : "Gửi thất bại.", false);
+      }
+    }catch(err){
+      setStatus("Lỗi: " + err, false);
+    }finally{
+      $("btnSubmit").disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
