@@ -54,11 +54,14 @@
 </div>
 
 <script>
-  const WEBAPP_URL =  "https://script.google.com/macros/s/AKfycbwKSEQkt3UrNbi360hyjD3V-WUZmR8KJextQVdx4Kq-UF3BEAyl3D6OyoR5WXDDBBRd3g/exec";
+  const WEBAPP_URL =  "https://script.google.com/macros/s/AKfycbwTL1RFQllTw_HBaxgxvBSz_RWTVkyOgf65eh-PtJ5mRPooTxou2EGFOdyT_IvwoPNmMA/exec";
 
   // khóa theo thiết bị
   const LS_DEVICE_ID = "one_send_device_id_v1";
   const LS_LOCKED   = "one_send_locked_v1";
+
+  const values = [...document.querySelectorAll('input[type=checkbox]:checked')].map(x => x.value);
+
 
   const $ = (id)=>document.getElementById(id);
 
@@ -87,6 +90,18 @@
     // block = true => khóa toàn bộ UI chọn/gửi
     $("card").classList.toggle("disabled", block);
   }
+  function setSending(isSending){
+  // disable/enable checkbox
+  document.querySelectorAll('#checkList input[type="checkbox"]').forEach(x => x.disabled = isSending);
+
+  // disable/enable buttons
+  $("btnSubmit").disabled = isSending;
+  $("btnClear").disabled  = isSending;
+
+  // đổi chữ nút
+  $("btnSubmit").textContent = isSending ? "Đã gửi" : "Xác nhận gửi";
+  }
+
 
   async function postToSheet(payload){
     const res = await fetch(WEBAPP_URL, {
@@ -96,6 +111,23 @@
     });
     return res.json();
   }
+  async function postToSheetWithTimeout(payload, ms){
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+
+  try{
+    const res = await fetch(WEBAPP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload),
+      signal: ctrl.signal
+    });
+    return await res.json();
+  } finally {
+    clearTimeout(t);
+  }
+  }
+
 
   // init
   const deviceId = getOrCreateDeviceId();
@@ -112,52 +144,50 @@
   });
 
   $("btnSubmit").addEventListener("click", async ()=>{
-    try{
-      if(WEBAPP_URL.includes("PASTE_YOUR_WEBAPP_URL_HERE")){
-        setStatus("Bạn chưa dán WEBAPP_URL.", false);
-        return;
-      }
+  try{
+    if(isLocked()){
+      setStatus("Thiết bị đã gửi 1 lần. Không thể gửi lại.", false);
+      setUIBlocked(true);
+      return;
+    }
 
-      // ✅ chặn ngay tại client
-      if(isLocked()){
-        setStatus("Thiết bị đã gửi 1 lần. Không thể gửi lại.", false);
-        setUIBlocked(true);
-        return;
-      }
+    const values = getSelected();
+    if(values.length === 0){
+      setStatus("Bạn cần chọn ít nhất 1 giá trị.", false);
+      return;
+    }
 
-      const values = getSelected();
-      if(values.length === 0){
-        setStatus("Bạn cần chọn ít nhất 1 giá trị.", false);
-        return;
-      }
+    const ok = confirm("Xác nhận gửi các giá trị đã chọn?\n\n- " + values.join("\n- "));
+    if(!ok) return;
 
-      // xác nhận trước khi gửi
-      const ok = confirm("Xác nhận gửi các giá trị đã chọn?\n\n- " + values.join("\n- "));
-      if(!ok) return;
+    // ✅ KHÓA UI NGAY KHI BẮT ĐẦU GỬI
+    setSending(true);
+    setStatus("Đang gửi... vui lòng chờ", true);
 
-      $("btnSubmit").disabled = true;
-      setStatus("Đang gửi...", true);
+    // (tuỳ chọn) timeout để không treo vô hạn
+    const payload = { deviceId, values };
+    const data = await postToSheetWithTimeout(payload, 25000); // 25s
 
-      const data = await postToSheet({ deviceId, values });
-
-      if(data && data.ok){
-        // ✅ khóa sau khi gửi thành công
+    if(data && data.ok){
+      setLocked(true);
+      setStatus("Gửi thành công. Thiết bị đã bị khóa.", true);
+      setUIBlocked(true);          // khóa vĩnh viễn
+    } else {
+      if(data && data.blocked){
         setLocked(true);
-        setStatus("Gửi thành công. Thiết bị đã bị khóa.", true);
         setUIBlocked(true);
       } else {
-        // ✅ nếu server báo blocked thì cũng khóa client luôn
-        if(data && data.blocked){
-          setLocked(true);
-          setUIBlocked(true);
-        }
         setStatus((data && (data.message || data.error)) ? (data.message || data.error) : "Gửi thất bại.", false);
+        // ✅ MỞ UI LẠI NẾU THẤT BẠI
+        setSending(false);
       }
-    }catch(err){
-      setStatus("Lỗi: " + err, false);
-    }finally{
-      $("btnSubmit").disabled = false;
     }
+
+  }catch(err){
+    setStatus("Lỗi: " + err, false);
+    // ✅ MỞ UI LẠI NẾU LỖI
+    setSending(false);
+  }
   });
 </script>
 </body>
