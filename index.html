@@ -107,15 +107,15 @@
     }
 }
 
-/* ===== MỜ + CHỮ TRỘI RÕ ===== */
-.card:has(#status:not(:empty)){
+/* ===== CHỈ MỜ KHI ĐÃ GỬI THÀNH CÔNG ===== */
+.card.locked{
   position: relative;
   opacity: .35;
   filter: grayscale(0.1);
 }
 
-/* Chữ nổi giữa card – màu trội */
-.card:has(#status:not(:empty))::after{
+/* Chữ nổi TRỘI chỉ khi locked */
+.card.locked::after{
   content: "ĐÃ GỬI THÀNH CÔNG";
   position: absolute;
   inset: 0;
@@ -128,11 +128,9 @@
   letter-spacing: 1.5px;
   text-transform: uppercase;
 
-  /* MÀU TRỘI */
-  color: #ffffff;
-  background: rgba(139,30,45,.85);   /* đỏ Agribank đậm */
+  color: #fff;
+  background: rgba(139,30,45,.85); /* đỏ Agribank */
 
-  /* làm chữ nổi */
   text-shadow:
     0 2px 6px rgba(0,0,0,.35),
     0 0 18px rgba(255,255,255,.35);
@@ -141,18 +139,50 @@
   pointer-events: none;
 }
 
-/* Giữ status bên dưới vẫn rõ */
-.card:has(#status:not(:empty)) #status{
+/* Status vẫn rõ */
+.card.locked #status{
   opacity: 1 !important;
   color: var(--brand);
   font-weight: 800;
 }
 
-/* Logo vẫn nhìn thấy */
-.card:has(#status:not(:empty)) .image img{
-  opacity: .85;
+/* ===== MỜ KHI ĐANG GỬI ===== */
+.card.sending{
+  opacity: .35;
+  filter: grayscale(0.1);
+  transition: opacity .2s ease;
 }
 
+/* ===== MỜ + CHỮ TRỘI KHI ĐÃ GỬI THÀNH CÔNG ===== */
+.card.locked{
+  position: relative;
+  opacity: .35;
+  filter: grayscale(0.1);
+}
+
+/* Chữ trội khi đã gửi */
+.card.locked::after{
+  content: "ĐÃ GỬI THÀNH CÔNG";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+
+  color: #fff;
+  background: rgba(139,30,45,.85);
+  text-shadow:
+    0 2px 6px rgba(0,0,0,.35),
+    0 0 18px rgba(255,255,255,.35);
+
+  z-index: 50;
+  pointer-events: none;
+}
 
 
 
@@ -316,6 +346,7 @@ document.getElementById("btnSubmit").addEventListener("click", async () => {
 
   const status = document.getElementById("status");
   status.textContent = "Đang gửi...";
+  document.getElementById("card").classList.add("sending");
 
   const votes = buildVotesObject();
 
@@ -332,8 +363,10 @@ document.getElementById("btnSubmit").addEventListener("click", async () => {
     status.textContent = "Gửi thành công. Thiết bị đã bị khóa.";
     localStorage.setItem(LOCK_KEY, "1");
     setLockedUI(true);
+    document.getElementById("card").classList.remove("sending");
   }catch(err){
     status.textContent = "Lỗi: " + err.message;
+    document.getElementById("card").classList.remove("sending");
   }
 });
 </script>
