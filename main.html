@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Agribank Chi nhánh Hưng Yên II</title>
+
+<style>
+  :root{
+    --bg:#f6f7f8; --card:#fff; --text:#111827; --muted:#6b7280; --line:#e5e7eb;
+    --brand:#8B1E2D;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+  .wrap{display:flex;align-items:center;justify-content:center;}
+  .card{width:min(860px,100%);background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,.06);padding:18px}
+ /* ====== Logo / Image ====== */
+.image{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+
+.image img{
+  width: 100%;
+  max-width: 220px;          /* chỉnh to/nhỏ theo ý */
+  height: auto;
+  display:block;
+  /* làm logo nổi bật, nhẹ nhàng */
+  border: 1px solid rgba(139,30,45,.20);   /* viền đỏ nhạt */
+  box-shadow: 0 10px 18px rgba(139,30,45,.12);
+
+
+  /* nếu logo có nền trắng hơi bệt, tăng nét */
+  filter: saturate(1.05) contrast(1.02);
+}
+  h1{margin:10px 0 4px;text-align:center}
+  .title-branch{font-size:20px;margin-top:3px;color:var(--brand)}
+  .desc{margin:8px auto 14px;max-width:720px;text-align:center;color:var(--muted);line-height:1.45}
+  .table{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .head,.row{display:grid;grid-template-columns: 1fr 140px 160px;gap:0;align-items:center}
+  .head{background:#fafafa;border-bottom:1px solid var(--line);}
+  .cell{padding:12px 12px;}
+  .row{border-bottom: 1px solid var(--line);}
+  .row:last-child .cell{border-bottom:none}
+  .choice{display:flex;gap:14px;align-items:center;justify-content:flex-start}
+  .choice label{display:flex;gap:8px;align-items:center;cursor:pointer;user-select:none}
+  input[type="checkbox"]{width:18px;height:18px;accent-color:var(--brand)}
+  .actions{display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap}
+  .btn,.btn2{border:none;border-radius:12px;padding:11px 16px;font-weight:700;cursor:pointer}
+  .btn{background:var(--brand);color:#fff}
+  .btn2{background:#eef0f3;color:#111827}
+  .status{margin-top:10px;text-align:center;font-weight:700}
+  .mono{margin-top:6px;text-align:center;color:var(--muted);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px}
+  .locked{opacity:.6;pointer-events:none}
+  /* ===== MOBILE: GIỮ 1 HÀNG – KHÔNG XUỐNG DÒNG ===== */
+@media (max-width: 560px){
+
+  /* bảng cuộn ngang nếu hẹp */
+  .table{
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* giữ layout grid 1 hàng */
+  .head,
+  .row{
+    grid-template-columns: minmax(150px, 0fr) 60px 70px;
+  }
+
+  /* không cho cell xuống dòng */
+  .cell{
+    white-space: nowrap;
+    padding:10px 8px;
+    font-size:14px;
+    margin: auto;
+  }
+  .cells{
+    padding:7px 0px;
+  }
+
+  /* tên KHÔNG xuống dòng */
+  .row .cell:first-child{
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* dài quá thì ... */
+  }
+
+  /* checkbox gọn hơn */
+  .choice{
+    gap:6px;
+  }
+
+  input[type="checkbox"]{
+    width:18px;
+    height:18px;
+  }
+
+  .choice span{
+    font-size:13px;
+  }
+}
+
+@media (max-width: 375px) {
+    .head, .row {
+        grid-template-columns: minmax(131px, 0fr) 54px 70px;
+    }
+}
+
+/* ===== MỜ + CHỮ TRỘI RÕ ===== */
+.card:has(#status:not(:empty)){
+  position: relative;
+  opacity: .35;
+  filter: grayscale(0.1);
+}
+
+/* Chữ nổi giữa card – màu trội */
+.card:has(#status:not(:empty))::after{
+  content: "ĐÃ GỬI THÀNH CÔNG";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+
+  /* MÀU TRỘI */
+  color: #ffffff;
+  background: rgba(139,30,45,.85);   /* đỏ Agribank đậm */
+
+  /* làm chữ nổi */
+  text-shadow:
+    0 2px 6px rgba(0,0,0,.35),
+    0 0 18px rgba(255,255,255,.35);
+
+  z-index: 50;
+  pointer-events: none;
+}
+
+/* Giữ status bên dưới vẫn rõ */
+.card:has(#status:not(:empty)) #status{
+  opacity: 1 !important;
+  color: var(--brand);
+  font-weight: 800;
+}
+
+/* Logo vẫn nhìn thấy */
+.card:has(#status:not(:empty)) .image img{
+  opacity: .85;
+}
+
+
+
+
+</style>
+</head>
+
+<body>
+<div class="wrap">
+  <div class="card" id="card">
+
+    <div class="image"><img src="image/Flag_of_Agribank.png" alt=""></div>
+    <h1 class="title-branch">CHI NHÁNH HƯNG YÊN II</h1>
+    <h1>BẦU BAN THANH TRA NHÂN DÂN</h1>
+
+    <p class="desc">
+      Sau khi gửi thành công, thiết bị sẽ bị khóa.
+    </p>
+
+    <div class="table" id="voteTable">
+      <div class="head">
+        <div class="cell">Họ và tên</div>
+        <div class="cell">Đồng ý</div>
+        <div class="cell">Không đồng ý</div>
+      </div>
+
+      <!-- rows (data-name là khóa để tạo payload) -->
+      <div class="row" data-name="Lê Thị Ngọc Chúc">
+        <div class="cell ce">Lê Thị Ngọc Chúc</div>
+        <div class="cell cells"><div class="choice"><label><input type="checkbox" class="agree"></label></div></div>
+        <div class="cell cells"><div class="choice"><label><input type="checkbox" class="disagree"></label></div></div>
+      </div>
+
+      <div class="row" data-name="Nguyễn Văn Đông">
+        <div class="cell ce">Nguyễn Văn Đông</div>
+        <div class="cell cells"><div class="choice"><label><input type="checkbox" class="agree"></label></div></div>
+        <div class="cell cells"><div class="choice"><label><input type="checkbox" class="disagree"></label></div></div>
+      </div>
+
+      <div class="row" data-name="Nguyễn Thị Lệ">
+        <div class="cell ce">Nguyễn Thị Lệ</div>
+        <div class="cell cells"><div class="choice"><label><input type="checkbox" class="agree"></label></div></div>
+        <div class="cell cells"><div class="choice"><label><input type="checkbox" class="disagree"></label></div></div>
+      </div>
+
+      <div class="row" data-name="Vũ Cao Nguyên">
+        <div class="cell ce">Vũ Cao Nguyên</div>
+        <div class="cell cells"><div class="choice"><label><input type="checkbox" class="agree"></label></div></div>
+        <div class="cell cells"><div class="choice"><label><input type="checkbox" class="disagree"></label></div></div>
+      </div>
+
+      <div class="row" data-name="Lều Thị Lan Phương">
+        <div class="cell ce">Lều Thị Lan Phương</div>
+        <div class="cell cells"><div class="choice"><label><input type="checkbox" class="agree"></label></div></div>
+        <div class="cell cells"><div class="choice"><label><input type="checkbox" class="disagree"></label></div></div>
+      </div>
+
+    </div>
+
+    <div class="actions">
+      <button class="btn" id="btnSubmit">Xác nhận gửi</button>
+      <button class="btn2" id="btnClear">Bỏ chọn</button>
+    </div>
+
+    <div class="status" id="status"></div>
+    <div class="mono" id="deviceBox"></div>
+
+  </div>
+</div>
+
+<script>
+/** =========================
+ *  CẤU HÌNH
+ *  ========================= */
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwzdREaNssv15SyFSc3gy1h7xa1G5VOoN8V-GqnfFr03hX3EsZCEGC21cQRamt_AhONlA/exec"; // <-- thay bằng URL của bạn
+
+/** =========================
+ *  DEVICE LOCK (giống kiểu bạn hay dùng)
+ *  ========================= */
+const LOCK_KEY = "vote_locked_v1";
+const DEVICE_KEY = "vote_device_id_v1";
+
+function getDeviceId(){
+  let id = localStorage.getItem(DEVICE_KEY);
+  if(!id){
+    id = "AGRIHY2-" + Math.random().toString().slice(2,5);
+    localStorage.setItem(DEVICE_KEY, id);
+  }
+  return id;
+}   
+
+const deviceId = getDeviceId();
+document.getElementById("deviceBox").textContent = "DeviceId: " + deviceId;
+
+function setLockedUI(locked){
+  const card = document.getElementById("card");
+  if(locked){
+    card.classList.add("locked");
+    document.getElementById("status").textContent = "Thiết bị đã bị khóa (đã gửi thành công).";
+  } else {
+    card.classList.remove("locked");
+    document.getElementById("status").textContent = "";
+  }
+}
+setLockedUI(localStorage.getItem(LOCK_KEY) === "1");
+
+/** =========================
+ *  RULE: mỗi người chỉ chọn 1 trong 2
+ *  ========================= */
+document.querySelectorAll(".row").forEach(row => {
+  const agree = row.querySelector(".agree");
+  const disagree = row.querySelector(".disagree");
+
+  agree.addEventListener("change", () => { if(agree.checked) disagree.checked = false; });
+  disagree.addEventListener("change", () => { if(disagree.checked) agree.checked = false; });
+});
+
+/** =========================
+ *  TẠO PAYLOAD: name -> 1/0/""
+ *  ========================= */
+function buildVotesObject(){
+  const obj = {};
+  document.querySelectorAll(".row").forEach(row => {
+    const name = row.getAttribute("data-name");
+    const agree = row.querySelector(".agree").checked;
+    const disagree = row.querySelector(".disagree").checked;
+
+    // ưu tiên: nếu agree => 1; nếu disagree => 0; else => ""
+    obj[name] = agree ? 1 : (disagree ? 0 : "");
+  });
+  return obj;
+}
+
+/** =========================
+ *  CLEAR
+ *  ========================= */
+document.getElementById("btnClear").addEventListener("click", () => {
+  if(localStorage.getItem(LOCK_KEY) === "1") return;
+  document.querySelectorAll(".agree,.disagree").forEach(cb => cb.checked = false);
+  document.getElementById("status").textContent = "Đã bỏ chọn.";
+});
+
+/** =========================
+ *  SEND
+ *  - Không tích ai vẫn gửi được: votes vẫn có đủ key với ""
+ *  ========================= */
+async function sendToSheet(payload){
+  const res = await fetch(SCRIPT_URL, {
+    method: "POST",
+    headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json().catch(()=> ({}));
+  if(!res.ok || data.ok === false){
+    throw new Error(data.message || "Gửi thất bại");
+  }
+  return data;
+}
+
+document.getElementById("btnSubmit").addEventListener("click", async () => {
+  if(localStorage.getItem(LOCK_KEY) === "1") return;
+
+  const status = document.getElementById("status");
+  status.textContent = "Đang gửi...";
+
+  const votes = buildVotesObject();
+
+  // Payload theo cách A: 1 dòng / 1 lượt
+  const payload = {
+    action: "vote_bttnd",
+    deviceId,
+    ts: new Date().toISOString(),
+    votes // { "Tên A":1, "Tên B":0, "Tên C":"", ... }
+  };
+
+  try{
+    await sendToSheet(payload);
+    status.textContent = "Gửi thành công. Thiết bị đã bị khóa.";
+    localStorage.setItem(LOCK_KEY, "1");
+    setLockedUI(true);
+  }catch(err){
+    status.textContent = "Lỗi: " + err.message;
+  }
+});
+</script>
+
+</body>
+</html>
