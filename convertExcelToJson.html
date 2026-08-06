@@ -47,12 +47,12 @@
   </section>
 
   <section class="card guide">
-    <b>Cấu trúc Excel từ cột A đến H (hàng 1 là tiêu đề)</b>
+    <b>Cấu trúc Excel từ cột A đến I (hàng 1 là tiêu đề)</b>
     <table>
-      <thead><tr><th>A - Danh mục</th><th>B - Câu hỏi</th><th>C - Đáp án A</th><th>D - Đáp án B</th><th>E - Đáp án C</th><th>F - Đáp án D</th><th>G - Đáp án đúng</th><th>H - Giải thích</th></tr></thead>
-      <tbody><tr><td>KHDN</td><td>Nội dung câu hỏi</td><td>Phương án A</td><td>Phương án B</td><td>Phương án C</td><td>Phương án D</td><td>2 hoặc B</td><td>Căn cứ...</td></tr></tbody>
+      <thead><tr><th>A - Danh mục</th><th>B - Câu hỏi</th><th>C - Đáp án A</th><th>D - Đáp án B</th><th>E - Đáp án C</th><th>F - Đáp án D</th><th>G - Đáp án đúng</th><th>H - Giải thích</th><th>I - Tên bộ câu hỏi</th></tr></thead>
+      <tbody><tr><td>KHDN</td><td>Nội dung câu hỏi</td><td>Phương án A</td><td>Phương án B</td><td>Phương án C</td><td>Phương án D</td><td>2 hoặc B</td><td>Căn cứ...</td><td>0608_NguyenVanA</td></tr></tbody>
     </table>
-    <p class="note">Đáp án đúng chấp nhận: 1, 2, 3, 4; A, B, C, D; hoặc “Đáp án A”, “Đáp án 1”. Các dòng không có câu hỏi sẽ được bỏ qua.</p>
+    <p class="note">Giữ nguyên dữ liệu cột A–H; chỉ thêm cột I theo dạng 0608_NguyenVanA. Cột A được xuất thành <code>category</code>, cột I được xuất riêng thành <code>name</code>; hai trường không ghi đè lẫn nhau. Đáp án đúng chấp nhận: 1, 2, 3, 4; A, B, C, D; hoặc “Đáp án A”, “Đáp án 1”.</p>
   </section>
 
   <section class="card">
@@ -120,18 +120,21 @@
     rows.slice(1).forEach((r, i) => {
       const rowNo = i + 2;
       if (!r.some(v => text(v))) return;
-      const category = text(r[0]), question = text(r[1]);
+      const oldCategory = text(r[0]), question = text(r[1]);
       const answers = [text(r[2]), text(r[3]), text(r[4]), text(r[5])];
       const correct = normalizeCorrect(r[6]);
       const explanation = text(r[7]);
+      const questionSetName = text(r[8]);
+      const category = oldCategory;
+      const name = questionSetName;
 
       if (!question) { errors++; issues.push(`Dòng ${rowNo}: thiếu nội dung câu hỏi — đã bỏ qua.`); return; }
-      if (!category) { errors++; issues.push(`Dòng ${rowNo}: thiếu danh mục — đã bỏ qua.`); return; }
+      if (!category) { errors++; issues.push(`Dòng ${rowNo}: cột A thiếu danh mục — đã bỏ qua.`); return; }
       if (answers.filter(Boolean).length < 2) { errors++; issues.push(`Dòng ${rowNo}: phải có ít nhất 2 phương án — đã bỏ qua.`); return; }
       if (!correct) { errors++; issues.push(`Dòng ${rowNo}: đáp án đúng “${text(r[6])}” không hợp lệ — đã bỏ qua.`); return; }
       if (!answers[correct - 1]) { errors++; issues.push(`Dòng ${rowNo}: phương án đúng số ${correct} đang để trống — đã bỏ qua.`); return; }
       if (!explanation) { warnings++; issues.push(`Dòng ${rowNo}: chưa có giải thích/căn cứ.`); }
-      result.push({category, question, answers, correct, explanation});
+      result.push({category, question, answers, correct, explanation, name});
     });
 
     currentJSON = JSON.stringify(result, null, 2);
@@ -165,4 +168,5 @@
   function escapeHTML(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 </script>
 </body>
+
 </html>
