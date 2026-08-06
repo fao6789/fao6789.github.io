@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chuyển Excel sang JSON - Thi nghiệp vụ chi nhánh</title>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <style>
+    :root { --red:#a71930; --red2:#851326; --gold:#f3b61f; --bg:#f4f6f8; --text:#24303f; --muted:#667085; }
+    * { box-sizing:border-box; }
+    body { margin:0; padding:24px; font-family:"Segoe UI",Arial,sans-serif; color:var(--text); background:var(--bg); }
+    .wrap { max-width:1100px; margin:auto; }
+    .hero { color:#fff; padding:24px; border-radius:18px; background:linear-gradient(135deg,var(--red),var(--red2)); box-shadow:0 10px 30px #a7193030; }
+    h1 { margin:0 0 8px; font-size:27px; }
+    .hero p { margin:0; opacity:.92; }
+    .card { margin-top:18px; padding:20px; border-radius:16px; background:#fff; box-shadow:0 5px 18px #10182812; }
+    .guide { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th,td { padding:9px; border:1px solid #e4e7ec; text-align:left; white-space:nowrap; }
+    th { background:#f9fafb; }
+    .tools { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+    input,select,button { min-height:43px; padding:9px 13px; border:1px solid #d0d5dd; border-radius:10px; font:inherit; }
+    input[type=file] { flex:1; min-width:260px; background:#fff; }
+    select { min-width:160px; }
+    button { border:0; color:#fff; background:var(--red); cursor:pointer; font-weight:650; }
+    button:hover { background:var(--red2); }
+    button.secondary { background:#475467; }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    .status { margin-top:14px; padding:12px 14px; border-radius:10px; background:#f2f4f7; color:var(--muted); }
+    .status.ok { color:#067647; background:#ecfdf3; }
+    .status.error { color:#b42318; background:#fef3f2; }
+    .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:14px; }
+    .stat { padding:12px; text-align:center; background:#f9fafb; border:1px solid #eaecf0; border-radius:10px; }
+    .stat b { display:block; font-size:21px; color:var(--red); }
+    pre { max-height:430px; overflow:auto; padding:16px; border-radius:12px; background:#111827; color:#e5e7eb; white-space:pre-wrap; word-break:break-word; }
+    details { margin-top:15px; }
+    summary { cursor:pointer; font-weight:650; }
+    .note { color:var(--muted); font-size:13px; margin:10px 0 0; }
+    @media(max-width:700px){ body{padding:12px}.stats{grid-template-columns:repeat(2,1fr)} }
+  </style>
+</head>
+<body>
+<main class="wrap">
+  <section class="hero">
+    <h1>Chuyển Excel → JSON</h1>
+    <p>Dành cho ngân hàng câu hỏi Thi nghiệp vụ Chi nhánh</p>
+  </section>
+
+  <section class="card guide">
+    <b>Cấu trúc Excel từ cột A đến H (hàng 1 là tiêu đề)</b>
+    <table>
+      <thead><tr><th>A - Danh mục</th><th>B - Câu hỏi</th><th>C - Đáp án A</th><th>D - Đáp án B</th><th>E - Đáp án C</th><th>F - Đáp án D</th><th>G - Đáp án đúng</th><th>H - Giải thích</th></tr></thead>
+      <tbody><tr><td>KHDN</td><td>Nội dung câu hỏi</td><td>Phương án A</td><td>Phương án B</td><td>Phương án C</td><td>Phương án D</td><td>2 hoặc B</td><td>Căn cứ...</td></tr></tbody>
+    </table>
+    <p class="note">Đáp án đúng chấp nhận: 1, 2, 3, 4; A, B, C, D; hoặc “Đáp án A”, “Đáp án 1”. Các dòng không có câu hỏi sẽ được bỏ qua.</p>
+  </section>
+
+  <section class="card">
+    <div class="tools">
+      <input type="file" id="excelFile" accept=".xlsx,.xls,.csv">
+      <select id="sheetSelect" hidden></select>
+      <button id="downloadBtn" disabled>Tải file JSON</button>
+      <button id="copyBtn" class="secondary" disabled>Sao chép JSON nén</button>
+    </div>
+    <div id="status" class="status">Chưa chọn file Excel.</div>
+    <div class="stats">
+      <div class="stat"><b id="totalCount">0</b>Tổng câu hợp lệ</div>
+      <div class="stat"><b id="categoryCount">0</b>Danh mục</div>
+      <div class="stat"><b id="warningCount">0</b>Cảnh báo</div>
+      <div class="stat"><b id="errorCount">0</b>Dòng lỗi</div>
+    </div>
+    <details open>
+      <summary>Xem trước JSON</summary>
+      <pre id="output">[]</pre>
+    </details>
+    <details id="issueBox" hidden>
+      <summary>Chi tiết cảnh báo/lỗi</summary>
+      <pre id="issues"></pre>
+    </details>
+  </section>
+</main>
+
+<script>
+  const el = id => document.getElementById(id);
+  const fileInput = el('excelFile'), sheetSelect = el('sheetSelect');
+  const downloadBtn = el('downloadBtn'), copyBtn = el('copyBtn');
+  let workbook = null, currentJSON = '[]', currentName = 'cau_hoi_thi_nghiep_vu';
+
+  function text(v) { return v == null ? '' : String(v).trim(); }
+  function normalizeCorrect(v) {
+    const raw = text(v).toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/Đ/g,'D');
+    if (/^[1-4]$/.test(raw)) return Number(raw);
+    if (/^[A-D]$/.test(raw)) return raw.charCodeAt(0) - 64;
+    const match = raw.match(/(?:DAP\s*AN|PHUONG\s*AN)?\s*([A-D]|[1-4])\s*$/);
+    if (!match) return null;
+    return /^[A-D]$/.test(match[1]) ? match[1].charCodeAt(0) - 64 : Number(match[1]);
+  }
+
+  fileInput.addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      workbook = XLSX.read(await file.arrayBuffer(), {type:'array'});
+      sheetSelect.innerHTML = workbook.SheetNames.map(n => `<option value="${escapeHTML(n)}">${escapeHTML(n)}</option>`).join('');
+      sheetSelect.hidden = false;
+      currentName = file.name.replace(/\.[^.]+$/, '') + '_thi_nghiep_vu';
+      convertSheet(workbook.SheetNames[0]);
+    } catch (err) {
+      setStatus('Không đọc được file: ' + err.message, 'error');
+    }
+  });
+
+  sheetSelect.addEventListener('change', e => convertSheet(e.target.value));
+
+  function convertSheet(sheetName) {
+    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {header:1, defval:'', raw:false});
+    const result = [], issues = [];
+    let warnings = 0, errors = 0;
+
+    rows.slice(1).forEach((r, i) => {
+      const rowNo = i + 2;
+      if (!r.some(v => text(v))) return;
+      const category = text(r[0]), question = text(r[1]);
+      const answers = [text(r[2]), text(r[3]), text(r[4]), text(r[5])];
+      const correct = normalizeCorrect(r[6]);
+      const explanation = text(r[7]);
+
+      if (!question) { errors++; issues.push(`Dòng ${rowNo}: thiếu nội dung câu hỏi — đã bỏ qua.`); return; }
+      if (!category) { errors++; issues.push(`Dòng ${rowNo}: thiếu danh mục — đã bỏ qua.`); return; }
+      if (answers.filter(Boolean).length < 2) { errors++; issues.push(`Dòng ${rowNo}: phải có ít nhất 2 phương án — đã bỏ qua.`); return; }
+      if (!correct) { errors++; issues.push(`Dòng ${rowNo}: đáp án đúng “${text(r[6])}” không hợp lệ — đã bỏ qua.`); return; }
+      if (!answers[correct - 1]) { errors++; issues.push(`Dòng ${rowNo}: phương án đúng số ${correct} đang để trống — đã bỏ qua.`); return; }
+      if (!explanation) { warnings++; issues.push(`Dòng ${rowNo}: chưa có giải thích/căn cứ.`); }
+      result.push({category, question, answers, correct, explanation});
+    });
+
+    currentJSON = JSON.stringify(result, null, 2);
+    el('output').textContent = currentJSON;
+    el('totalCount').textContent = result.length;
+    el('categoryCount').textContent = new Set(result.map(q => q.category)).size;
+    el('warningCount').textContent = warnings;
+    el('errorCount').textContent = errors;
+    el('issues').textContent = issues.length ? issues.join('\n') : 'Không có cảnh báo hoặc lỗi.';
+    el('issueBox').hidden = !issues.length;
+    downloadBtn.disabled = copyBtn.disabled = result.length === 0;
+    setStatus(`Đã chuyển đổi sheet “${sheetName}”: ${result.length} câu hợp lệ.`, errors ? 'error' : 'ok');
+  }
+
+  downloadBtn.addEventListener('click', () => {
+    const blob = new Blob(['\ufeff' + currentJSON], {type:'application/json;charset=utf-8'});
+    const url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = currentName + '.json'; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+
+  copyBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(JSON.parse(currentJSON)));
+      const old = copyBtn.textContent; copyBtn.textContent = 'Đã sao chép';
+      setTimeout(() => copyBtn.textContent = old, 1400);
+    } catch (_) { setStatus('Trình duyệt không cho phép sao chép. Hãy dùng nút Tải file JSON.', 'error'); }
+  });
+
+  function setStatus(message, type='') { el('status').textContent = message; el('status').className = 'status ' + type; }
+  function escapeHTML(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+</script>
+</body>
+</html>
