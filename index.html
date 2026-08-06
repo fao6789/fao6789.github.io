@@ -869,7 +869,9 @@
     let questions = [...data];
     let currentIndex = 0;
     let score = 0;
-    let answered = {};
+    // Lưu kết quả theo chính đối tượng câu hỏi để không bị mất hoặc lệch
+    // khi đổi danh mục hay thay đổi thứ tự hiển thị.
+    let answered = new Map();
     let questionListPage = 1;
 
     const questionListPageSize = 100;
@@ -922,7 +924,7 @@
 
     function renderQuestion() {
       const q = questions[currentIndex];
-      const saved = answered[currentIndex];
+      const saved = answered.get(q);
 
       const filteredAnswers = q.answers
         .map((answer, index) => ({ answer, index }))
@@ -957,17 +959,17 @@
 
       questionContainer.querySelectorAll(".answer").forEach(ans => {
         ans.onclick = () => {
-          if (answered[currentIndex]) return;
+          if (answered.has(q)) return;
 
           const idx = parseInt(ans.dataset.index);
           const correctIdx = q.correct - 1;
           const status = idx === correctIdx ? "correct" : "wrong";
 
-          answered[currentIndex] = {
+          answered.set(q, {
             selected: idx,
             status: status,
             explanation: q.explanation
-          };
+          });
 
           if (status === "correct") score++;
           scoreDisplay.textContent = score;
@@ -1010,8 +1012,9 @@
     btn.textContent = i + 1;
 
     if (i === currentIndex) btn.classList.add("active");
-    if (answered[i]?.status === "correct") btn.classList.add("correct");
-    if (answered[i]?.status === "wrong") btn.classList.add("wrong");
+    const saved = answered.get(questions[i]);
+    if (saved?.status === "correct") btn.classList.add("correct");
+    if (saved?.status === "wrong") btn.classList.add("wrong");
 
     btn.onclick = () => {
       currentIndex = i;
@@ -1035,7 +1038,7 @@
   questionList.appendChild(nextPageBtn);
 
   statusText.textContent =
-    `Đã trả lời: ${Object.keys(answered).length}/${questions.length} | Trang ${questionListPage}/${totalPages || 1}`;
+    `Đã trả lời: ${questions.filter(q => answered.has(q)).length}/${questions.length} | Trang ${questionListPage}/${totalPages || 1}`;
 }
 
 function syncQuestionListPage() {
@@ -1043,11 +1046,13 @@ function syncQuestionListPage() {
 }
 
     function updateProgress() {
-      const totalAnswered = Object.keys(answered).length;
-      const percent = questions.length ? Math.round((totalAnswered / questions.length) * 100) : 0;
+      const visibleAnswered = questions.filter(q => answered.has(q)).length;
+      const totalAnswered = answered.size;
+      const percent = questions.length ? Math.round((visibleAnswered / questions.length) * 100) : 0;
       progressBar.style.width = percent + "%";
       progressText.textContent = `Tiến độ: ${percent}%`;
       answeredCount.textContent = totalAnswered;
+      scoreDisplay.textContent = score;
     }
 
     function updateNavigationButtons() {
@@ -1062,8 +1067,9 @@ function syncQuestionListPage() {
 
     function showResult() {
       const total = questions.length;
-      const totalAnswered = Object.keys(answered).length;
-      const percent = total ? Math.round((score / total) * 100) : 0;
+      const totalAnswered = questions.filter(q => answered.has(q)).length;
+      const visibleScore = questions.filter(q => answered.get(q)?.status === "correct").length;
+      const percent = total ? Math.round((visibleScore / total) * 100) : 0;
 
       let rank = "Cần cố gắng thêm";
       if (percent >= 90) rank = "Xuất sắc";
@@ -1072,7 +1078,7 @@ function syncQuestionListPage() {
       else if (percent >= 40) rank = "Trung bình";
 
       resultText.innerHTML = `
-        Bạn trả lời đúng <b>${score}/${total}</b> câu.<br>
+        Bạn trả lời đúng <b>${visibleScore}/${total}</b> câu trong danh mục đang hiển thị.<br>
         Tỷ lệ đúng: <b>${percent}%</b>.<br>
         Số câu đã làm: <b>${totalAnswered}/${total}</b>.<br>
         Đánh giá: <b>${rank}</b>.
@@ -1105,20 +1111,17 @@ function syncQuestionListPage() {
         currentIndex = 0;
         questionListPage = 1;
         score = 0;
-        answered = {};
+        answered.clear();
         scoreDisplay.textContent = "0";
         progressBar.style.width = "0%";
         renderQuestion();
       }
     };
 
-    
     shuffleBtn.onclick = () => {
-       questions = questions.sort(()=>Math.random()-0.5);
+      questions = [...questions].sort(()=>Math.random()-0.5);
       currentIndex = 0;
       questionListPage = 1;
-      score = 0;
-      answered = {};
       renderQuestion();
     };
 
@@ -1129,8 +1132,6 @@ function syncQuestionListPage() {
         : data.filter(q => q.category === selected);
       currentIndex = 0;
       questionListPage = 1;
-      score = 0;
-      answered = {};
       renderQuestion();
     };
 
