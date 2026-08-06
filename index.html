@@ -1047,6 +1047,7 @@ function syncQuestionListPage() {
       const percent = questions.length ? Math.round((totalAnswered / questions.length) * 100) : 0;
       progressBar.style.width = percent + "%";
       progressText.textContent = `Tiến độ: ${percent}%`;
+      answeredCount.textContent = totalAnswered;
     }
 
     function updateNavigationButtons() {
@@ -1105,12 +1106,13 @@ function syncQuestionListPage() {
         questionListPage = 1;
         score = 0;
         answered = {};
-        scoreDisplay.textContent = "Điểm: 0";
+        scoreDisplay.textContent = "0";
         progressBar.style.width = "0%";
         renderQuestion();
       }
     };
 
+    
     shuffleBtn.onclick = () => {
        questions = questions.sort(()=>Math.random()-0.5);
       currentIndex = 0;
