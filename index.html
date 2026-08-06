@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Đại sứ văn hóa số - Agribank Chi nhánh Hưng Yên II</title>
-  <style>
+ <style>
     :root{
       --bg: #f3f6fb;
       --card: #ffffff;
@@ -633,6 +633,25 @@
       }
     }
 
+    /* Giữ 4 nút điều hướng trên cùng một hàng từ iPad trở xuống */
+    @media (max-width: 1024px) {
+      .navigation {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: clamp(4px, 1vw, 10px);
+        width: 100%;
+      }
+
+      .navigation button {
+        flex: 1 1 0;
+        width: auto;
+        min-width: 0;
+        padding: 11px clamp(3px, 1.2vw, 14px);
+        font-size: clamp(9px, 1.8vw, 16px);
+        white-space: nowrap;
+      }
+    }
+
     .question-list button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
@@ -777,7 +796,7 @@
 <body>
   <div class="container">
     <header class="digital-ambassador-header">
-      <!-- <div class="agribank-mark" aria-hidden="true"></div> -->
+      <!-- <div class="agribank-mark" aria-hidden="true">A</div> -->
       <div>
         <h1>CHI NHÁNH HƯNG YÊN II</h1>
         <p>ĐẠI SỨ VĂN HÓA SỐ</p>
@@ -788,7 +807,7 @@
       <div class="toolbar-left">
         <div class="header">
         <div class="brand">
-          <!-- <h1>Đại sứ văn hóa số - Hưng Yên II</h1> -->
+          <!-- <h1>QuizZzZ - 11032026</h1> -->
         </div>
       </div>
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
