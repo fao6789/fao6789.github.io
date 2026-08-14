@@ -852,13 +852,13 @@
     .app-screen { display: none; }
     .app-screen.active { display: block; }
     .menu-screen, .exam-setup, .exam-shell {
-      max-width: 1180px; margin: 18px auto; padding: 22px;
+      max-width: 100%; margin: 18px auto; padding: 22px;
       background: rgba(255,255,255,.94); border: 1px solid var(--border);
       border-radius: 24px; box-shadow: var(--shadow);
     }
     .menu-title { text-align:center; color:#8b1e2d; margin:6px 0 4px; }
     .menu-subtitle { text-align:center; color:var(--muted); margin:0 0 24px; }
-    .menu-cards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
+    .menu-cards { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; }
     .menu-card { padding:24px; border:1px solid var(--border); border-radius:20px; background:#fff; }
     .menu-card h2 { margin:0 0 8px; }
     .menu-card p { color:var(--muted); min-height:48px; }
@@ -869,7 +869,7 @@
     .exam-config-grid { display:grid; grid-template-columns:repeat(4,minmax(150px,1fr)); gap:14px; }
     .config-field { background:#f8fafc; border:1px solid var(--border); border-radius:14px; padding:12px; }
     .config-field label { display:block; margin-bottom:7px; }
-    .config-field input { width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:10px; font-size:16px; }
+    .config-field input, .config-field select { width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:10px; font-size:16px; background:#fff; }
     .exam-total { margin:16px 0; padding:12px 14px; border-radius:12px; background:var(--info-bg); font-weight:700; }
     .exam-total.error { color:#b91c1c; background:var(--danger-bg); }
     .exam-header { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
@@ -905,13 +905,35 @@
     .exam-result-stat span { display:block; color:var(--muted); font-size:14px; margin-bottom:5px; }
     .exam-result-stat b { color:#8b1e2d; font-size:21px; }
     .exam-evaluation { grid-column:1/-1; padding:14px 16px; border-radius:14px; background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; text-align:center; }
+    .mastery-setup, .mastery-shell {
+      max-width:100%; margin:18px auto; padding:22px; background:rgba(255,255,255,.94);
+      border:1px solid var(--border); border-radius:24px; box-shadow:var(--shadow);
+    }
+    .mastery-config-grid { display:grid; grid-template-columns:repeat(3,minmax(180px,1fr)); gap:14px; }
+    .mastery-info { margin:16px 0; padding:12px 14px; border-radius:12px; background:var(--info-bg); font-weight:700; }
+    .mastery-info.error { color:#b91c1c; background:var(--danger-bg); }
+    .mastery-status { display:grid; grid-template-columns:repeat(4,minmax(130px,1fr)); gap:10px; margin-bottom:14px; }
+    .mastery-stat { padding:11px 13px; border:1px solid var(--border); border-radius:12px; background:#f8fafc; text-align:center; }
+    .mastery-stat span { display:block; color:var(--muted); font-size:13px; }
+    .mastery-stat b { display:block; margin-top:3px; font-size:20px; color:#8b1e2d; }
+    .mastery-timer { font-size:26px; color:#b91c1c !important; }
+    .mastery-question-card { background:#fff; border:1px solid var(--border); border-radius:22px; padding:22px; min-height:300px; }
+    .mastery-feedback { margin-top:16px; padding:12px 14px; border-radius:12px; font-weight:700; }
+    .mastery-feedback.correct { color:#166534; background:#dcfce7; }
+    .mastery-feedback.wrong { color:#991b1b; background:#fee2e2; }
+    .mastery-nav { display:flex; justify-content:center; gap:12px; margin-top:18px; }
+    #masteryNextBtn { min-width:220px; }
+    .mastery-result-actions { display:flex; justify-content:center; gap:12px; flex-wrap:wrap; margin-top:18px; }
     @media (max-width: 900px) {
       .exam-layout { grid-template-columns:1fr; }
       .exam-config-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .menu-cards { grid-template-columns:1fr; }
+      .mastery-status { grid-template-columns:repeat(2,minmax(0,1fr)); }
       .exam-answers { grid-template-columns:1fr; }
     }
     @media (max-width: 600px) {
       .menu-cards, .exam-config-grid { grid-template-columns:1fr; }
+      .mastery-config-grid, .mastery-status { grid-template-columns:1fr; }
       .menu-screen, .exam-setup, .exam-shell { margin:6px; padding:14px; }
       .exam-nav button { padding:9px 5px; font-size:12px; white-space:nowrap; }
       .exam-result-summary { grid-template-columns:1fr; }
@@ -934,6 +956,11 @@
         <h2>📝 Thi thử</h2>
         <p>Tự đặt mình vào áp lực như thi thật ,câu hỏi ngẫu nhiên, thời gian ngắn gọn. Sai ở đây chỉ mất điểm, sai trong phòng thi thì mất .... à mà thôi!!!</p>
         <button type="button" id="openExamSetupBtn">Thi thật không đùa</button>
+      </div>
+      <div class="menu-card">
+        <h2>🔁 Lòng tham không giới hạn</h2>
+        <p>Hãy tham gia để biết giới hạn của bạn :((</p>
+        <button type="button" id="openMasterySetupBtn">Bắt đầu ôn tập vô hạn</button>
       </div>
     </div>
   </section>
@@ -1048,6 +1075,49 @@
     </div>
     <div class="result-box show"><div class="result-title">Tổng kết bài thi</div><div class="result-text" id="examResultSummary"></div></div>
     <div class="wrong-review" id="wrongReview"></div>
+  </section>
+
+  <section id="masterySetupScreen" class="app-screen mastery-setup">
+    <div class="screen-heading"><h2>Cấu hình ôn tập đến khi đúng hết</h2><button type="button" class="back-menu-btn masteryBackMenu">← Menu</button></div>
+    <div class="mastery-config-grid">
+      <div class="config-field">
+        <label for="masteryCategory">Danh mục</label>
+        <select id="masteryCategory">
+          <option value="__ALL__">Hiển thị tất cả</option>
+          <option value="SPDV">Sản phẩm dịch vụ (SPDV)</option>
+          <option value="VH">Văn hóa (VH)</option>
+          <option value="CSKH">Chăm sóc khách hàng (CSKH)</option>
+        </select>
+      </div>
+      <div class="config-field"><label for="masteryCount">Tổng số câu ôn tập</label><input id="masteryCount" type="number" min="1" value="20"></div>
+      <div class="config-field"><label for="masterySeconds">Thời gian mỗi câu (giây)</label><input id="masterySeconds" type="number" min="1" max="300" value="15"></div>
+    </div>
+    <div class="mastery-info" id="masteryConfigInfo"></div>
+    <button type="button" id="startMasteryBtn" style="display: block;margin: auto;">🔁 Bắt đầu ôn đến khi đúng hết</button>
+  </section>
+
+  <section id="masteryScreen" class="app-screen mastery-shell">
+    <div class="mastery-status">
+      <div class="mastery-stat"><span>Vòng hiện tại</span><b id="masteryRoundLabel">1</b></div>
+      <div class="mastery-stat"><span>Đã đúng</span><b id="masteryCorrectLabel">0/0</b></div>
+      <div class="mastery-stat"><span>Còn phải làm</span><b id="masteryRemainingLabel">0</b></div>
+      <div class="mastery-stat"><span>Thời gian mỗi câu</span><b class="mastery-timer" id="masteryTimer">00:15</b></div>
+    </div>
+    <div class="mastery-question-card" id="masteryQuestionContainer"></div>
+    <div class="mastery-nav">
+      <button type="button" id="masteryNextBtn">Câu tiếp theo →</button>
+      <button type="button" class="back-menu-btn" id="masteryStopBtn">Dừng ôn tập</button>
+    </div>
+  </section>
+
+  <section id="masteryResultScreen" class="app-screen mastery-shell">
+    <div class="screen-heading"><h2>🎉 Đã trả lời đúng toàn bộ</h2></div>
+    <div class="result-box show"><div class="result-title">Kết quả ôn tập</div><div class="result-text" id="masteryResultSummary"></div></div>
+    <div class="mastery-result-actions">
+      <button type="button" id="masteryRepeatBtn">🔄 Ôn lại bộ câu này</button>
+      <button type="button" id="masteryNewBtn">🎲 Tạo bộ câu hỏi mới</button>
+      <button type="button" class="back-menu-btn masteryBackMenu">← Về menu</button>
+    </div>
   </section>
 
   <footer class="site-footer">
@@ -1435,6 +1505,9 @@ function syncQuestionListPage() {
     const examSetupScreen = document.getElementById("examSetupScreen");
     const examScreen = document.getElementById("examScreen");
     const examResultScreen = document.getElementById("examResultScreen");
+    const masterySetupScreen = document.getElementById("masterySetupScreen");
+    const masteryScreen = document.getElementById("masteryScreen");
+    const masteryResultScreen = document.getElementById("masteryResultScreen");
     const examSPDV = document.getElementById("examSPDV");
     const examVH = document.getElementById("examVH");
     const examCSKH = document.getElementById("examCSKH");
@@ -1448,6 +1521,18 @@ function syncQuestionListPage() {
     const examTimer = document.getElementById("examTimer");
     const examResultSummary = document.getElementById("examResultSummary");
     const wrongReview = document.getElementById("wrongReview");
+    const masteryCategory = document.getElementById("masteryCategory");
+    const masteryCount = document.getElementById("masteryCount");
+    const masterySeconds = document.getElementById("masterySeconds");
+    const masteryConfigInfo = document.getElementById("masteryConfigInfo");
+    const startMasteryBtn = document.getElementById("startMasteryBtn");
+    const masteryQuestionContainer = document.getElementById("masteryQuestionContainer");
+    const masteryNextBtn = document.getElementById("masteryNextBtn");
+    const masteryRoundLabel = document.getElementById("masteryRoundLabel");
+    const masteryCorrectLabel = document.getElementById("masteryCorrectLabel");
+    const masteryRemainingLabel = document.getElementById("masteryRemainingLabel");
+    const masteryTimer = document.getElementById("masteryTimer");
+    const masteryResultSummary = document.getElementById("masteryResultSummary");
 
     let examQuestions = [];
     let examAnswers = new Map();
@@ -1458,6 +1543,21 @@ function syncQuestionListPage() {
     let examFinished = false;
     let examQuestionListPage = 1;
     const examQuestionListPageSize = 100;
+
+    let masteryPool = [];
+    let masteryQueue = [];
+    let masteryRetryQueue = [];
+    let masteryCompleted = new Set();
+    let masteryCurrentQuestion = null;
+    let masteryCurrentSelections = [];
+    let masteryCurrentGraded = false;
+    let masteryCurrentCorrect = false;
+    let masteryRound = 1;
+    let masterySecondsPerQuestion = 15;
+    let masterySecondsLeft = 15;
+    let masteryTimerId = null;
+    let masteryAttempts = 0;
+    let masteryStartedAt = 0;
 
     function escapeHtml(value) {
       return String(value ?? "")
@@ -1512,6 +1612,209 @@ function syncQuestionListPage() {
     function randomQuestionsByCategory(category, quantity) {
       const categoryQuestions = data.filter(q => q.category === category);
       return shuffled(categoryQuestions).slice(0, quantity);
+    }
+
+    /* ============== ÔN TẬP ĐẾN KHI ĐÚNG HẾT ============== */
+    function masteryAvailableQuestions() {
+      if (masteryCategory.value === "__ALL__") {
+        return data.filter(q => ["SPDV", "VH", "CSKH"].includes(q.category));
+      }
+      return data.filter(q => q.category === masteryCategory.value);
+    }
+
+    function readMasteryConfig() {
+      return {
+        category: masteryCategory.value,
+        count: Math.max(0, parseInt(masteryCount.value, 10) || 0),
+        seconds: Math.max(0, parseInt(masterySeconds.value, 10) || 0)
+      };
+    }
+
+    function updateMasteryConfig() {
+      const config = readMasteryConfig();
+      const available = masteryAvailableQuestions().length;
+      const allMode = config.category === "__ALL__";
+      const categoryCounts = {
+        SPDV: countAvailable("SPDV"),
+        VH: countAvailable("VH"),
+        CSKH: countAvailable("CSKH")
+      };
+      const countValid = config.count >= (allMode ? 3 : 1) && config.count <= available;
+      const timeValid = config.seconds >= 1 && config.seconds <= 300;
+      const hasAllCategories = !allMode || Object.values(categoryCounts).every(value => value > 0);
+      const isValid = countValid && timeValid && hasAllCategories;
+      masteryConfigInfo.classList.toggle("error", !isValid);
+      masteryConfigInfo.innerHTML = `Có <b>${available}</b> câu phù hợp · Chọn <b>${config.count}</b> câu · <b>${config.seconds} giây/câu</b>` +
+        (allMode ? `<br>Kho câu hỏi: SPDV ${categoryCounts.SPDV} · VH ${categoryCounts.VH} · CSKH ${categoryCounts.CSKH}. Bộ ôn sẽ có đủ cả 3 danh mục.` : "") +
+        (!countValid ? `<br>Số câu phải từ ${allMode ? 3 : 1} đến ${available}.` : "") +
+        (!timeValid ? "<br>Thời gian mỗi câu phải từ 1 đến 300 giây." : "") +
+        (!hasAllCategories ? "<br>Dữ liệu phải có đủ SPDV, VH và CSKH." : "");
+      startMasteryBtn.disabled = !isValid;
+      return isValid;
+    }
+
+    function buildMasteryPool(config) {
+      if (config.category !== "__ALL__") {
+        return shuffled(data.filter(q => q.category === config.category)).slice(0, config.count);
+      }
+
+      const guaranteed = ["SPDV", "VH", "CSKH"].map(category =>
+        shuffled(data.filter(q => q.category === category))[0]
+      );
+      const guaranteedSet = new Set(guaranteed);
+      const remainingCandidates = data.filter(q =>
+        ["SPDV", "VH", "CSKH"].includes(q.category) && !guaranteedSet.has(q)
+      );
+      return shuffled([...guaranteed, ...shuffled(remainingCandidates).slice(0, config.count - 3)]);
+    }
+
+    function beginMasterySession(useExistingPool = false) {
+      if (!useExistingPool && !updateMasteryConfig()) return;
+      const config = readMasteryConfig();
+      if (!useExistingPool) masteryPool = buildMasteryPool(config);
+      masterySecondsPerQuestion = config.seconds;
+      masteryQueue = shuffled(masteryPool);
+      masteryRetryQueue = [];
+      masteryCompleted = new Set();
+      masteryCurrentQuestion = null;
+      masteryCurrentSelections = [];
+      masteryCurrentGraded = false;
+      masteryCurrentCorrect = false;
+      masteryRound = 1;
+      masteryAttempts = 0;
+      masteryStartedAt = Date.now();
+      clearInterval(masteryTimerId);
+      showAppScreen(masteryScreen);
+      loadNextMasteryQuestion();
+    }
+
+    function renderMasteryTimer() {
+      const value = Math.max(0, masterySecondsLeft);
+      const minutes = Math.floor(value / 60);
+      const seconds = value % 60;
+      masteryTimer.textContent = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    }
+
+    function updateMasteryStatus() {
+      masteryRoundLabel.textContent = masteryRound;
+      masteryCorrectLabel.textContent = `${masteryCompleted.size}/${masteryPool.length}`;
+      masteryRemainingLabel.textContent = masteryPool.length - masteryCompleted.size;
+    }
+
+    function startMasteryQuestionTimer() {
+      clearInterval(masteryTimerId);
+      masterySecondsLeft = masterySecondsPerQuestion;
+      renderMasteryTimer();
+      masteryTimerId = setInterval(() => {
+        masterySecondsLeft--;
+        renderMasteryTimer();
+        if (masterySecondsLeft <= 0) advanceMasteryQuestion();
+      }, 1000);
+    }
+
+    function loadNextMasteryQuestion() {
+      if (!masteryQueue.length) {
+        if (masteryRetryQueue.length) {
+          masteryQueue = shuffled(masteryRetryQueue);
+          masteryRetryQueue = [];
+          masteryRound++;
+        } else {
+          finishMasterySession();
+          return;
+        }
+      }
+
+      masteryCurrentQuestion = masteryQueue.shift();
+      masteryCurrentSelections = [];
+      masteryCurrentGraded = false;
+      masteryCurrentCorrect = false;
+      updateMasteryStatus();
+      renderMasteryQuestion();
+      startMasteryQuestionTimer();
+    }
+
+    function renderMasteryQuestion() {
+      const q = masteryCurrentQuestion;
+      if (!q) return;
+      const correctIndexes = getCorrectIndexes(q);
+      const isMultiple = correctIndexes.length > 1;
+      const saved = masteryCurrentGraded ? {
+        selected: [...masteryCurrentSelections],
+        status: masteryCurrentCorrect ? "correct" : "wrong"
+      } : null;
+      const availableAnswers = q.answers
+        .map((answer, index) => ({ answer, index }))
+        .filter(item => item.answer && item.answer.trim());
+      const feedback = masteryCurrentGraded
+        ? `<div class="mastery-feedback ${masteryCurrentCorrect ? "correct" : "wrong"}">${masteryCurrentCorrect ? "✅ Chính xác! Câu này đã được hoàn thành." : "❌ Chưa đúng. Câu này sẽ quay lại ở vòng sau."}<br><span style="font-weight:400">${escapeHtml(q.explanation || "Không có giải thích/căn cứ.")}</span></div>`
+        : "";
+
+      masteryQuestionContainer.innerHTML = `
+        <div class="question">${escapeHtml(q.question)}</div>
+        <div class="multi-answer-note">${isMultiple ? "☑ Câu hỏi có nhiều đáp án đúng. Chọn đầy đủ rồi bấm “Xác nhận đáp án”." : `Danh mục: ${escapeHtml(getCategoryDisplay(q.category))}`}</div>
+        <div class="answers">${availableAnswers.map(({ answer, index }, displayIndex) => `
+          <div class="answer ${getAnswerClass(saved, index, q)} ${!masteryCurrentGraded && masteryCurrentSelections.includes(index) ? "selected" : ""}" data-mastery-index="${index}">
+            <span class="answer-letter">${String.fromCharCode(65 + displayIndex)}</span><span>${escapeHtml(answer)}</span>
+          </div>`).join("")}</div>
+        ${isMultiple && !masteryCurrentGraded ? `<div class="multi-confirm-wrap"><button type="button" id="masteryConfirmBtn" class="multi-confirm-btn" ${masteryCurrentSelections.length ? "" : "disabled"}>Xác nhận đáp án</button></div>` : ""}
+        ${feedback}`;
+
+      masteryQuestionContainer.querySelectorAll(".answer").forEach(option => {
+        option.onclick = () => {
+          if (masteryCurrentGraded) return;
+          const index = Number(option.dataset.masteryIndex);
+          if (isMultiple) {
+            const position = masteryCurrentSelections.indexOf(index);
+            if (position >= 0) masteryCurrentSelections.splice(position, 1);
+            else masteryCurrentSelections.push(index);
+            renderMasteryQuestion();
+          } else {
+            masteryCurrentSelections = [index];
+            gradeMasteryAnswer();
+          }
+        };
+      });
+
+      const confirmButton = document.getElementById("masteryConfirmBtn");
+      if (confirmButton) confirmButton.onclick = gradeMasteryAnswer;
+    }
+
+    function gradeMasteryAnswer() {
+      if (masteryCurrentGraded || !masteryCurrentSelections.length) return;
+      masteryCurrentGraded = true;
+      masteryCurrentCorrect = isCorrectSelection(masteryCurrentQuestion, masteryCurrentSelections);
+      masteryAttempts++;
+      if (masteryCurrentCorrect) masteryCompleted.add(masteryCurrentQuestion);
+      updateMasteryStatus();
+      renderMasteryQuestion();
+    }
+
+    function advanceMasteryQuestion() {
+      if (!masteryCurrentQuestion) return;
+      clearInterval(masteryTimerId);
+      masteryTimerId = null;
+      if (!masteryCurrentGraded) masteryAttempts++;
+      if (!masteryCurrentCorrect) masteryRetryQueue.push(masteryCurrentQuestion);
+      masteryCurrentQuestion = null;
+      loadNextMasteryQuestion();
+    }
+
+    function finishMasterySession() {
+      clearInterval(masteryTimerId);
+      masteryTimerId = null;
+      const elapsed = Math.max(0, Math.round((Date.now() - masteryStartedAt) / 1000));
+      const minutes = Math.floor(elapsed / 60);
+      const seconds = elapsed % 60;
+      masteryResultSummary.innerHTML = `<div class="exam-result-summary">
+        <div class="exam-result-stat"><span>Hoàn thành đúng</span><b>${masteryCompleted.size}/${masteryPool.length}</b></div>
+        <div class="exam-result-stat"><span>Số vòng</span><b>${masteryRound}</b></div>
+        <div class="exam-result-stat"><span>Tổng lượt làm</span><b>${masteryAttempts}</b></div>
+        <div class="exam-result-stat"><span>Thời gian</span><b>${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}</b></div>
+        <div class="exam-result-stat"><span>Danh mục</span><b>${masteryCategory.value === "__ALL__" ? "Tất cả" : masteryCategory.value}</b></div>
+        <div class="exam-result-stat"><span>Thời gian mỗi câu</span><b>${masterySecondsPerQuestion}s</b></div>
+        <div class="exam-evaluation">Bạn đã trả lời đúng toàn bộ câu hỏi trong bộ ôn tập.</div>
+      </div>`;
+      showAppScreen(masteryResultScreen);
     }
 
     function startExam() {
@@ -1689,10 +1992,29 @@ function syncQuestionListPage() {
 
     document.getElementById("openStudyBtn").onclick = () => showAppScreen(studyScreen);
     document.getElementById("openExamSetupBtn").onclick = () => { updateExamTotal(); showAppScreen(examSetupScreen); };
+    document.getElementById("openMasterySetupBtn").onclick = () => { updateMasteryConfig(); showAppScreen(masterySetupScreen); };
     document.getElementById("studyBackMenuBtn").onclick = () => showAppScreen(menuScreen);
     document.querySelectorAll(".examBackMenu").forEach(button => button.onclick = () => showAppScreen(menuScreen));
+    document.querySelectorAll(".masteryBackMenu").forEach(button => button.onclick = () => {
+      clearInterval(masteryTimerId);
+      masteryTimerId = null;
+      showAppScreen(menuScreen);
+    });
     [examSPDV, examVH, examCSKH, examMinutes].forEach(input => input.oninput = updateExamTotal);
+    [masteryCategory, masteryCount, masterySeconds].forEach(input => input.oninput = updateMasteryConfig);
+    masteryCategory.onchange = updateMasteryConfig;
     document.getElementById("startExamBtn").onclick = startExam;
+    startMasteryBtn.onclick = () => beginMasterySession(false);
+    masteryNextBtn.onclick = advanceMasteryQuestion;
+    document.getElementById("masteryStopBtn").onclick = () => {
+      if (!confirm("Dừng phiên ôn tập hiện tại và quay lại phần cấu hình?")) return;
+      clearInterval(masteryTimerId);
+      masteryTimerId = null;
+      updateMasteryConfig();
+      showAppScreen(masterySetupScreen);
+    };
+    document.getElementById("masteryRepeatBtn").onclick = () => beginMasterySession(true);
+    document.getElementById("masteryNewBtn").onclick = () => { updateMasteryConfig(); showAppScreen(masterySetupScreen); };
     function goToExamQuestion(index) {
       examCurrentIndex = index;
       examQuestionListPage = Math.floor(index / examQuestionListPageSize) + 1;
@@ -1704,6 +2026,7 @@ function syncQuestionListPage() {
     // document.getElementById("restartExamBtn").onclick = () => { if (confirm("Làm lại bài thi từ đầu?")) startExam(); };
     document.getElementById("retryExamBtn").onclick = () => { updateExamTotal(); showAppScreen(examSetupScreen); };
     updateExamTotal();
+    updateMasteryConfig();
     
   </script>
 </body>
