@@ -52,7 +52,7 @@
       <thead><tr><th>A - Danh mục</th><th>B - Câu hỏi</th><th>C - Đáp án A</th><th>D - Đáp án B</th><th>E - Đáp án C</th><th>F - Đáp án D</th><th>G - Đáp án đúng</th><th>H - Giải thích</th><th>I - Tên bộ câu hỏi</th></tr></thead>
       <tbody><tr><td>KHDN</td><td>Nội dung câu hỏi</td><td>Phương án A</td><td>Phương án B</td><td>Phương án C</td><td>Phương án D</td><td>2 hoặc B</td><td>Căn cứ...</td><td>0608_NguyenVanA</td></tr></tbody>
     </table>
-    <p class="note">Giữ nguyên dữ liệu cột A–H; chỉ thêm cột I theo dạng 0608_NguyenVanA. Cột A được xuất thành <code>category</code>, cột I được xuất riêng thành <code>name</code>; hai trường không ghi đè lẫn nhau. Đáp án đúng chấp nhận: 1, 2, 3, 4; A, B, C, D; hoặc “Đáp án A”, “Đáp án 1”.</p>
+    <p class="note">Giữ nguyên dữ liệu cột A–H; chỉ thêm cột I theo dạng 0608_NguyenVanA. Cột A được xuất thành <code>category</code>, cột I được xuất riêng thành <code>name</code>; hai trường không ghi đè lẫn nhau. Đáp án đúng chấp nhận một hoặc nhiều lựa chọn: <code>A</code>, <code>2</code>, <code>A,C</code>, <code>a; b; d</code>, <code>1,3</code> hoặc <code>1 2 4</code>. Câu nhiều đáp án được xuất thành mảng, ví dụ <code>"correct": [1,3]</code>.</p>
   </section>
 
   <section class="card">
@@ -89,11 +89,14 @@
   function text(v) { return v == null ? '' : String(v).trim(); }
   function normalizeCorrect(v) {
     const raw = text(v).toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/Đ/g,'D');
-    if (/^[1-4]$/.test(raw)) return Number(raw);
-    if (/^[A-D]$/.test(raw)) return raw.charCodeAt(0) - 64;
-    const match = raw.match(/(?:DAP\s*AN|PHUONG\s*AN)?\s*([A-D]|[1-4])\s*$/);
-    if (!match) return null;
-    return /^[A-D]$/.test(match[1]) ? match[1].charCodeAt(0) - 64 : Number(match[1]);
+    const cleaned = raw.replace(/DAP\s*AN|PHUONG\s*AN/g, ' ');
+    const tokens = [...cleaned.matchAll(/(?:^|[^A-Z0-9])([A-D1-4])(?=$|[^A-Z0-9])/g)].map(match => match[1]);
+    const values = [...new Set(tokens.map(token =>
+      /^[A-D]$/.test(token) ? token.charCodeAt(0) - 64 : Number(token)
+    ))].sort((a, b) => a - b);
+
+    if (!values.length) return null;
+    return values.length === 1 ? values[0] : values;
   }
 
   fileInput.addEventListener('change', async e => {
@@ -132,7 +135,13 @@
       if (!category) { errors++; issues.push(`Dòng ${rowNo}: cột A thiếu danh mục — đã bỏ qua.`); return; }
       if (answers.filter(Boolean).length < 2) { errors++; issues.push(`Dòng ${rowNo}: phải có ít nhất 2 phương án — đã bỏ qua.`); return; }
       if (!correct) { errors++; issues.push(`Dòng ${rowNo}: đáp án đúng “${text(r[6])}” không hợp lệ — đã bỏ qua.`); return; }
-      if (!answers[correct - 1]) { errors++; issues.push(`Dòng ${rowNo}: phương án đúng số ${correct} đang để trống — đã bỏ qua.`); return; }
+      const correctValues = Array.isArray(correct) ? correct : [correct];
+      const emptyCorrectAnswers = correctValues.filter(value => !answers[value - 1]);
+      if (emptyCorrectAnswers.length) {
+        errors++;
+        issues.push(`Dòng ${rowNo}: phương án đúng số ${emptyCorrectAnswers.join(', ')} đang để trống — đã bỏ qua.`);
+        return;
+      }
       if (!explanation) { warnings++; issues.push(`Dòng ${rowNo}: chưa có giải thích/căn cứ.`); }
       result.push({category, question, answers, correct, explanation, name});
     });
