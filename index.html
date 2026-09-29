@@ -2713,7 +2713,10 @@ function syncQuestionListPage() {
       dataDependentMenuButtons.forEach(button => { if (button) button.disabled = disabled; });
     }
 
-    function showDataLoadMessage(message, isError = false) {
+    let dataLoadMessageTimer = null;
+
+    function showDataLoadMessage(message, isError = false, autoHide = false) {
+      clearTimeout(dataLoadMessageTimer);
       let box = document.getElementById("dataLoadMessage");
       if (!box) {
         box = document.createElement("div");
@@ -2725,11 +2728,16 @@ function syncQuestionListPage() {
       box.style.background = isError ? "#fff0f0" : "#eef8f1";
       box.style.color = isError ? "#a01818" : "#176b3a";
       box.style.border = isError ? "1px solid #e3aaaa" : "1px solid #add5bb";
+      if (autoHide) {
+        dataLoadMessageTimer = setTimeout(() => {
+          box.remove();
+        }, 3000);
+      }
     }
 
     async function loadQuestionData() {
       setDataButtonsDisabled(true);
-      showDataLoadMessage("Đang tải dữ liệu câu hỏi từ data.json...");
+      showDataLoadMessage("Đang nạp dữ liệu câu hỏi...");
       try {
         const response = await fetch("data.json", { cache: "no-store" });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -2751,7 +2759,7 @@ function syncQuestionListPage() {
         initSimulationCategories();
         updateSimulationConfig();
         setDataButtonsDisabled(false);
-        showDataLoadMessage(`Đã tải ${data.length} câu hỏi từ data.json.`);
+        showDataLoadMessage(`Đã nạp ${data.length.toLocaleString("vi-VN")} câu hỏi.`, false, true);
       } catch (error) {
         console.error("Không tải được data.json:", error);
         showDataLoadMessage("Không tải được data.json. Hãy đặt data.json cùng thư mục với index(4).html và mở trang qua GitHub Pages hoặc máy chủ web.", true);
