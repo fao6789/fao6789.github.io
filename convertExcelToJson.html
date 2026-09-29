@@ -161,7 +161,7 @@
   downloadBtn.addEventListener('click', () => {
     const blob = new Blob(['\ufeff' + currentJSON], {type:'application/json;charset=utf-8'});
     const url = URL.createObjectURL(blob), a = document.createElement('a');
-    a.href = url; a.download = currentName + '.json'; a.click();
+    a.href = url; a.download = 'data.json'; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
 
