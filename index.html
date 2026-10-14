@@ -950,6 +950,23 @@
     .simulation-nav button:disabled { opacity:.45; cursor:not-allowed; box-shadow:none; transform:none; }
     .simulation-answer.correct { background:var(--success-bg); border-color:var(--success); color:#166534; }
     .simulation-explanation { margin-top:20px; padding:10px 13px; border-radius:16px; color:#1e3a8a; background:var(--info-bg); border:1px solid #bfdbfe; font-style:italic; font-size:13px; line-height:1.6; }
+    .hall-card { border:2px solid #d7b45a; background:linear-gradient(145deg,#fffdf4,#fff8dc); }
+    .hall-card h2 { color:#8a5b00; }
+    .hall-profile { display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap; padding:12px 16px; margin-bottom:16px; border-radius:14px; background:#fff8dc; border:1px solid #ead28b; }
+    .hall-profile b { color:#8a5b00; }
+    .hall-actions { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin:16px 0; }
+    .hall-actions button { min-width:180px; }
+    .hall-ranking { overflow:auto; margin-top:18px; border:1px solid var(--border); border-radius:14px; }
+    .hall-ranking table { width:100%; border-collapse:collapse; background:#fff; }
+    .hall-ranking th,.hall-ranking td { padding:10px 12px; border-bottom:1px solid var(--border); text-align:left; white-space:nowrap; }
+    .hall-ranking th { background:#fff8dc; color:#704900; }
+    .hall-ranking tr:last-child td { border-bottom:0; }
+    .hall-status { padding:10px 14px; border-radius:12px; background:#eff6ff; border:1px solid #bfdbfe; color:#1e3a8a; margin:12px 0; }
+    .hall-status.error { background:#fff0f0; border-color:#e3aaaa; color:#a01818; }
+    .hall-device { font-size:12px; color:var(--muted); line-height:1.6; overflow-wrap:anywhere; }
+    .hall-name-row { display:grid; grid-template-columns:minmax(220px,1fr) auto; gap:10px; align-items:end; }
+    .hall-resume { padding:14px; border-radius:14px; background:#f0fdf4; border:1px solid #86efac; margin:14px 0; }
+    .hall-exam-meta { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
     @media (max-width: 900px) {
       .exam-layout { grid-template-columns:1fr; }
       .exam-config-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
@@ -963,6 +980,7 @@
       .menu-cards, .exam-config-grid { grid-template-columns:1fr; }
       .mastery-config-grid, .mastery-status { grid-template-columns:1fr; }
       .simulation-config-grid, .simulation-status-grid, .simulation-nav { grid-template-columns:1fr; }
+      .hall-name-row { grid-template-columns:1fr; }
       .menu-screen, .exam-setup, .exam-shell { margin:6px; padding:14px; }
       .exam-nav button { padding:9px 5px; font-size:12px; white-space:nowrap; }
       .exam-result-summary { grid-template-columns:1fr; }
@@ -1000,6 +1018,11 @@
         <h2>🔊 Mô phỏng</h2>
         <p>Nghe đọc câu hỏi bằng tiếng Việt, suy nghĩ trong thời gian giới hạn rồi xem đáp án đúng.</p>
         <button type="button" id="openSimulationSetupBtn">Bắt đầu mô phỏng</button>
+      </div>
+      <div class="menu-card hall-card">
+        <h2>🏆 Đấu trường danh vọng</h2>
+        <p>Thi thử có ghi danh, tự động lưu bài đang làm, kết quả cá nhân và xếp hạng người chơi.</p>
+        <button type="button" id="openHallBtn">Vào Đấu trường</button>
       </div>
     </div>
   </section>
@@ -1205,6 +1228,60 @@
     </div>
     <div class="result-box show"><div class="result-title">Tổng kết bài thi</div><div class="result-text" id="examResultSummary"></div></div>
     <div class="wrong-review" id="wrongReview"></div>
+  </section>
+
+  <section id="hallSetupScreen" class="app-screen exam-setup">
+    <div class="screen-heading"><h2>🏆 Đấu trường danh vọng</h2><button type="button" class="back-menu-btn hallBackMenu">← Menu</button></div>
+    <div class="hall-profile" id="hallProfileBox"><span>Chưa ghi danh</span></div>
+    <div class="hall-name-row" id="hallNameRow">
+      <div class="config-field"><label for="hallPlayerName">Tên người chơi</label><input id="hallPlayerName" type="text" maxlength="80" placeholder="Nhập tên bất kỳ"></div>
+      <button type="button" id="hallRegisterBtn">Ghi danh</button>
+    </div>
+    <div class="exam-config-grid">
+      <div class="config-field"><label for="hallCategory">Danh mục</label><select id="hallCategory"></select></div>
+      <div class="config-field"><label for="hallCount">Số lượng câu hỏi</label><input id="hallCount" type="number" min="1" value="50"></div>
+      <div class="config-field"><label for="hallMinutes">Thời gian thi (phút)</label><input id="hallMinutes" type="number" min="1" max="120" value="30"></div>
+    </div>
+    <div class="hall-resume" id="hallResumeBox" hidden></div>
+    <div class="hall-status" id="hallStatus">Nhập tên để ghi danh. Không cần mật khẩu.</div>
+    <div class="hall-actions">
+      <button type="button" id="hallStartBtn" disabled>▶ Bắt đầu bài mới</button>
+      <button type="button" id="hallContinueBtn" hidden>↩ Tiếp tục bài đang làm</button>
+      <button type="button" id="hallRankingBtn">🏅 Bảng xếp hạng</button>
+    </div>
+    <div class="hall-device" id="hallDeviceInfo"></div>
+  </section>
+
+  <section id="hallExamScreen" class="app-screen exam-shell">
+    <div class="hall-exam-meta"><b id="hallPlayerLabel">Người chơi</b><b id="hallSyncLabel">Đã lưu trên máy</b></div>
+    <div class="exam-header">
+      <div><b id="hallProgressLabel">Câu 1/1</b><div id="hallAnsweredLabel">Đã làm: 0/0</div></div>
+      <div class="exam-timer" id="hallTimer">30:00</div>
+    </div>
+    <div class="exam-layout">
+      <div>
+        <div class="exam-question-card" id="hallQuestionContainer"></div>
+        <div class="exam-nav">
+          <button type="button" id="hallPrevBtn">← Câu trước</button>
+          <button type="button" id="hallNextBtn">Câu tiếp theo →</button>
+          <button type="button" id="hallSaveExitBtn">💾 Lưu và thoát</button>
+          <button type="button" id="hallFinishBtn">✅ Nộp bài</button>
+        </div>
+      </div>
+      <aside class="right-panel"><div class="exam-list-wrap"><div class="exam-question-list" id="hallQuestionList"></div><div class="exam-list-note">Chạm vào số để chuyển nhanh đến câu hỏi</div></div></aside>
+    </div>
+  </section>
+
+  <section id="hallResultScreen" class="app-screen exam-shell">
+    <div class="screen-heading"><h2>🏆 Kết quả Đấu trường</h2><button type="button" class="back-menu-btn hallBackMenu">← Menu</button></div>
+    <div class="result-box show"><div class="result-title">Kết quả cá nhân</div><div class="result-text" id="hallResultSummary"></div></div>
+    <div class="hall-actions"><button type="button" id="hallNewExamBtn">Thi bài mới</button><button type="button" id="hallResultRankingBtn">🏅 Xem bảng xếp hạng</button></div>
+  </section>
+
+  <section id="hallRankingScreen" class="app-screen exam-shell">
+    <div class="screen-heading"><h2>🏅 Bảng xếp hạng</h2><button type="button" id="hallRankingBackBtn">← Quay lại</button></div>
+    <div class="hall-status" id="hallRankingStatus">Đang tải bảng xếp hạng...</div>
+    <div class="hall-ranking" id="hallRankingTable"></div>
   </section>
 
   <section id="masterySetupScreen" class="app-screen mastery-setup">
@@ -1836,6 +1913,10 @@ function syncQuestionListPage() {
     const simulationSetupScreen = document.getElementById("simulationSetupScreen");
     const simulationScreen = document.getElementById("simulationScreen");
     const simulationResultScreen = document.getElementById("simulationResultScreen");
+    const hallSetupScreen = document.getElementById("hallSetupScreen");
+    const hallExamScreen = document.getElementById("hallExamScreen");
+    const hallResultScreen = document.getElementById("hallResultScreen");
+    const hallRankingScreen = document.getElementById("hallRankingScreen");
     const examSPDV = document.getElementById("examSPDV");
     const examVH = document.getElementById("examVH");
     const examCSKH = document.getElementById("examCSKH");
@@ -1883,6 +1964,28 @@ function syncQuestionListPage() {
     const simulationTimer = document.getElementById("simulationTimer");
     const simulationSpeaking = document.getElementById("simulationSpeaking");
     const simulationResultSummary = document.getElementById("simulationResultSummary");
+    const hallPlayerName = document.getElementById("hallPlayerName");
+    const hallProfileBox = document.getElementById("hallProfileBox");
+    const hallNameRow = document.getElementById("hallNameRow");
+    const hallRegisterBtn = document.getElementById("hallRegisterBtn");
+    const hallCategory = document.getElementById("hallCategory");
+    const hallCount = document.getElementById("hallCount");
+    const hallMinutes = document.getElementById("hallMinutes");
+    const hallResumeBox = document.getElementById("hallResumeBox");
+    const hallStatus = document.getElementById("hallStatus");
+    const hallStartBtn = document.getElementById("hallStartBtn");
+    const hallContinueBtn = document.getElementById("hallContinueBtn");
+    const hallDeviceInfo = document.getElementById("hallDeviceInfo");
+    const hallQuestionContainer = document.getElementById("hallQuestionContainer");
+    const hallQuestionList = document.getElementById("hallQuestionList");
+    const hallProgressLabel = document.getElementById("hallProgressLabel");
+    const hallAnsweredLabel = document.getElementById("hallAnsweredLabel");
+    const hallTimer = document.getElementById("hallTimer");
+    const hallPlayerLabel = document.getElementById("hallPlayerLabel");
+    const hallSyncLabel = document.getElementById("hallSyncLabel");
+    const hallResultSummary = document.getElementById("hallResultSummary");
+    const hallRankingStatus = document.getElementById("hallRankingStatus");
+    const hallRankingTable = document.getElementById("hallRankingTable");
 
     let examQuestions = [];
     let examAnswers = new Map();
@@ -1920,6 +2023,23 @@ function syncQuestionListPage() {
     let simulationConfig = null;
     let simulationStartedAt = 0;
     let simulationUtteranceToken = 0;
+
+    /* Dán URL Web App của Google Apps Script vào giữa hai dấu nháy. */
+    const HALL_API_URL = "https://script.google.com/macros/s/AKfycbwxP2H_sG_YRa6-ba7tc6jYuTK1OOskpdYktH4w9BlAv53URf3fyj-5f7smyM3xYNCZ9w/exec";
+    const HALL_PLAYER_KEY = "agribank_hall_player_v1";
+    const HALL_PROGRESS_KEY = "agribank_hall_progress_v1";
+    const HALL_RESULTS_KEY = "agribank_hall_results_v1";
+    const HALL_DEVICE_KEY = "agribank_hall_device_v1";
+    let hallPlayer = null;
+    let hallQuestions = [];
+    let hallAnswers = new Map();
+    let hallCurrentIndex = 0;
+    let hallDeadline = 0;
+    let hallStartedAt = 0;
+    let hallTimerId = null;
+    let hallSyncTimerId = null;
+    let hallFinished = false;
+    let hallReturnScreen = hallSetupScreen;
 
     function escapeHtml(value) {
       return String(value ?? "")
@@ -1974,6 +2094,319 @@ function syncQuestionListPage() {
     function randomQuestionsByCategory(category, quantity) {
       const categoryQuestions = data.filter(q => q.category === category);
       return shuffled(categoryQuestions).slice(0, quantity);
+    }
+
+    /* ==================== ĐẤU TRƯỜNG DANH VỌNG ==================== */
+    function hallReadStorage(key, fallback = null) {
+      try { const value = localStorage.getItem(key); return value ? JSON.parse(value) : fallback; }
+      catch (_) { return fallback; }
+    }
+
+    function hallWriteStorage(key, value) {
+      try { localStorage.setItem(key, JSON.stringify(value)); return true; }
+      catch (_) { return false; }
+    }
+
+    function hallDeviceId() {
+      let id = localStorage.getItem(HALL_DEVICE_KEY);
+      if (!id) {
+        id = "DV-" + Date.now().toString(36).toUpperCase() + "-" + Math.random().toString(36).slice(2, 10).toUpperCase();
+        localStorage.setItem(HALL_DEVICE_KEY, id);
+      }
+      return id;
+    }
+
+    function hallGetDeviceInfo() {
+      return {
+        deviceId: hallDeviceId(),
+        platform: navigator.userAgentData?.platform || navigator.platform || "",
+        userAgent: navigator.userAgent || "",
+        language: navigator.language || "",
+        screen: `${screen.width}x${screen.height}`,
+        viewport: `${window.innerWidth}x${window.innerHeight}`,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "",
+        cpuCores: navigator.hardwareConcurrency || "",
+        memoryGB: navigator.deviceMemory || "",
+        touchPoints: navigator.maxTouchPoints || 0
+      };
+    }
+
+    function hallLocalPlayerId() {
+      const now = new Date();
+      const date = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+      return `${date}-LOCAL-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+    }
+
+    async function hallApiPost(payload) {
+      if (!HALL_API_URL) return null;
+      const response = await fetch(HALL_API_URL, { method: "POST", body: JSON.stringify(payload) });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const result = await response.json();
+      if (!result.ok) throw new Error(result.message || "Google Sheets từ chối yêu cầu");
+      return result;
+    }
+
+    function hallSetStatus(message, isError = false) {
+      hallStatus.textContent = message;
+      hallStatus.classList.toggle("error", isError);
+    }
+
+    function hallInitCategories() {
+      const categories = [...new Set(data.map(q => String(q.category ?? "").trim()).filter(Boolean))];
+      const selected = hallCategory.value;
+      hallCategory.innerHTML = ['<option value="__ALL__">Tất cả danh mục</option>', ...categories.map(category => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`)].join("");
+      hallCategory.value = [...hallCategory.options].some(option => option.value === selected) ? selected : "__ALL__";
+      hallUpdateConfig();
+    }
+
+    function hallAvailableQuestions() {
+      return data.filter(q => hallCategory.value === "__ALL__" || String(q.category ?? "").trim() === hallCategory.value);
+    }
+
+    function hallUpdateConfig() {
+      const available = hallAvailableQuestions().length;
+      hallCount.max = Math.max(1, available);
+      const count = parseInt(hallCount.value, 10) || 0;
+      const minutes = parseInt(hallMinutes.value, 10) || 0;
+      const valid = !!hallPlayer && count >= 1 && count <= available && minutes >= 1 && minutes <= 120;
+      hallStartBtn.disabled = !valid;
+      if (!hallPlayer) hallSetStatus("Nhập tên để ghi danh. Không cần mật khẩu.");
+      else if (!valid) hallSetStatus(`Có ${available} câu phù hợp. Số câu phải từ 1 đến ${available}; thời gian từ 1 đến 120 phút.`, true);
+      else hallSetStatus(`Sẵn sàng: ${count} câu · ${minutes} phút · ${available} câu có thể chọn.`);
+    }
+
+    function hallRenderProfile() {
+      hallPlayer = hallReadStorage(HALL_PLAYER_KEY, null);
+      if (!hallPlayer) {
+        hallProfileBox.innerHTML = "<span>Chưa ghi danh</span>";
+        hallNameRow.hidden = false;
+      } else {
+        hallProfileBox.innerHTML = `<span><b>${escapeHtml(hallPlayer.name)}</b> · Mã: <b>${escapeHtml(hallPlayer.playerId)}</b></span><button type="button" id="hallChangePlayerBtn">Đổi người chơi</button>`;
+        hallNameRow.hidden = true;
+        document.getElementById("hallChangePlayerBtn").onclick = hallChangePlayer;
+      }
+      hallDeviceInfo.textContent = `Thiết bị: ${hallDeviceId()} · ${hallGetDeviceInfo().platform} · Màn hình ${screen.width}x${screen.height} · ${Intl.DateTimeFormat().resolvedOptions().timeZone}`;
+      hallUpdateResumeBox();
+      hallUpdateConfig();
+    }
+
+    async function hallRegister() {
+      const name = hallPlayerName.value.trim().replace(/\s+/g, " ");
+      if (!name) return hallSetStatus("Vui lòng nhập tên người chơi.", true);
+      hallRegisterBtn.disabled = true;
+      hallSetStatus("Đang ghi danh...");
+      const createdAt = new Date().toISOString();
+      let player = { playerId: hallLocalPlayerId(), name, createdAt, deviceId: hallDeviceId(), synced: false };
+      try {
+        const result = await hallApiPost({ action: "register", name, createdAt, device: hallGetDeviceInfo() });
+        if (result?.player) player = { ...result.player, synced: true };
+      } catch (error) {
+        console.warn("Chưa đồng bộ được người chơi:", error);
+      }
+      hallPlayer = player;
+      hallWriteStorage(HALL_PLAYER_KEY, player);
+      hallPlayerName.value = "";
+      hallRegisterBtn.disabled = false;
+      hallRenderProfile();
+      hallSetStatus(player.synced ? `Đã ghi danh với mã ${player.playerId}.` : `Đã ghi danh trên máy với mã ${player.playerId}. Cần cấu hình Apps Script để có xếp hạng chung.`);
+    }
+
+    function hallChangePlayer() {
+      if (hallReadStorage(HALL_PROGRESS_KEY, null) && !confirm("Bài đang làm của người chơi hiện tại sẽ bị xóa. Tiếp tục?")) return;
+      clearInterval(hallTimerId);
+      localStorage.removeItem(HALL_PLAYER_KEY);
+      localStorage.removeItem(HALL_PROGRESS_KEY);
+      hallPlayer = null;
+      hallRenderProfile();
+    }
+
+    function hallSerializeProgress() {
+      return {
+        version: 1,
+        playerId: hallPlayer?.playerId || "",
+        playerName: hallPlayer?.name || "",
+        questionIndexes: hallQuestions.map(q => data.indexOf(q)),
+        answers: Object.fromEntries([...hallAnswers.entries()]),
+        currentIndex: hallCurrentIndex,
+        category: hallCategory.value,
+        count: hallQuestions.length,
+        minutes: Math.max(1, Math.round((hallDeadline - hallStartedAt) / 60000)),
+        startedAt: hallStartedAt,
+        deadline: hallDeadline,
+        updatedAt: Date.now(),
+        device: hallGetDeviceInfo()
+      };
+    }
+
+    function hallSaveProgress(sync = true) {
+      if (!hallPlayer || !hallQuestions.length || hallFinished) return;
+      const progress = hallSerializeProgress();
+      hallWriteStorage(HALL_PROGRESS_KEY, progress);
+      hallSyncLabel.textContent = "Đã lưu trên máy";
+      if (sync && HALL_API_URL) {
+        clearTimeout(hallSyncTimerId);
+        hallSyncLabel.textContent = "Đã lưu trên máy · Đang chờ đồng bộ";
+        hallSyncTimerId = setTimeout(async () => {
+          try {
+            await hallApiPost({ action: "save_progress", player: hallPlayer, progress });
+            hallSyncLabel.textContent = "Đã đồng bộ Google Sheets";
+          } catch (_) { hallSyncLabel.textContent = "Đã lưu trên máy · Chờ đồng bộ"; }
+        }, 1200);
+      }
+    }
+
+    function hallUpdateResumeBox() {
+      const progress = hallReadStorage(HALL_PROGRESS_KEY, null);
+      const valid = progress && hallPlayer && progress.playerId === hallPlayer.playerId && Array.isArray(progress.questionIndexes);
+      hallResumeBox.hidden = !valid;
+      hallContinueBtn.hidden = !valid;
+      if (valid) {
+        const answered = Object.keys(progress.answers || {}).length;
+        hallResumeBox.innerHTML = `<b>Có bài chưa hoàn thành:</b> ${answered}/${progress.questionIndexes.length} câu · ${escapeHtml(progress.category === "__ALL__" ? "Tất cả danh mục" : progress.category)} · lưu lúc ${new Date(progress.updatedAt).toLocaleString("vi-VN")}.`;
+      }
+    }
+
+    function hallStartNewExam() {
+      if (!hallPlayer || hallStartBtn.disabled) return;
+      const available = hallAvailableQuestions();
+      const count = parseInt(hallCount.value, 10);
+      const minutes = parseInt(hallMinutes.value, 10);
+      const old = hallReadStorage(HALL_PROGRESS_KEY, null);
+      if (old && !confirm("Bắt đầu bài mới sẽ thay thế bài đang lưu. Tiếp tục?")) return;
+      hallQuestions = shuffled(available).slice(0, count);
+      hallAnswers = new Map();
+      hallCurrentIndex = 0;
+      hallStartedAt = Date.now();
+      hallDeadline = hallStartedAt + minutes * 60000;
+      hallFinished = false;
+      hallPlayerLabel.textContent = `${hallPlayer.name} · ${hallPlayer.playerId}`;
+      showAppScreen(hallExamScreen);
+      hallStartTimer();
+      hallRenderQuestion();
+      hallSaveProgress(true);
+    }
+
+    function hallContinueExam() {
+      const progress = hallReadStorage(HALL_PROGRESS_KEY, null);
+      if (!progress || !hallPlayer || progress.playerId !== hallPlayer.playerId) return;
+      hallQuestions = progress.questionIndexes.map(index => data[index]).filter(Boolean);
+      if (!hallQuestions.length) return hallSetStatus("Không thể khôi phục bài vì dữ liệu câu hỏi đã thay đổi.", true);
+      hallAnswers = new Map(Object.entries(progress.answers || {}).map(([key, value]) => [Number(key), value]));
+      hallCurrentIndex = Math.min(progress.currentIndex || 0, hallQuestions.length - 1);
+      hallStartedAt = progress.startedAt || Date.now();
+      hallDeadline = progress.deadline || Date.now();
+      if ([...hallCategory.options].some(option => option.value === progress.category)) hallCategory.value = progress.category;
+      hallFinished = false;
+      hallPlayerLabel.textContent = `${hallPlayer.name} · ${hallPlayer.playerId}`;
+      showAppScreen(hallExamScreen);
+      if (hallDeadline <= Date.now()) hallFinishExam(true); else { hallStartTimer(); hallRenderQuestion(); }
+    }
+
+    function hallRenderTimer() {
+      const seconds = Math.max(0, Math.ceil((hallDeadline - Date.now()) / 1000));
+      hallTimer.textContent = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+      return seconds;
+    }
+
+    function hallStartTimer() {
+      clearInterval(hallTimerId);
+      hallRenderTimer();
+      hallTimerId = setInterval(() => { if (hallRenderTimer() <= 0) hallFinishExam(true); }, 1000);
+    }
+
+    function hallRenderQuestion() {
+      const q = hallQuestions[hallCurrentIndex];
+      if (!q) return;
+      const correct = getCorrectIndexes(q);
+      const multiple = correct.length > 1;
+      const selected = hallAnswers.get(hallCurrentIndex) || [];
+      hallProgressLabel.textContent = `Câu ${hallCurrentIndex + 1}/${hallQuestions.length}`;
+      hallAnsweredLabel.textContent = `Đã làm: ${hallAnswers.size}/${hallQuestions.length}`;
+      hallQuestionContainer.innerHTML = `<div class="question">${escapeHtml(q.question)}</div><div class="multi-answer-note">${multiple ? "Câu này có nhiều đáp án đúng" : "Chọn một đáp án"}</div><div class="exam-answers">${q.answers.map((answer, index) => answer && answer.trim() ? `<label class="exam-answer ${selected.includes(index) ? "selected" : ""}"><input type="${multiple ? "checkbox" : "radio"}" name="hallAnswer" value="${index}" ${selected.includes(index) ? "checked" : ""}><span class="answer-letter">${String.fromCharCode(65 + index)}</span><span>${escapeHtml(answer)}</span></label>` : "").join("")}</div>`;
+      hallQuestionContainer.querySelectorAll('input[name="hallAnswer"]').forEach(input => input.onchange = () => {
+        let values;
+        if (multiple) values = [...hallQuestionContainer.querySelectorAll('input[name="hallAnswer"]:checked')].map(item => Number(item.value));
+        else values = [Number(input.value)];
+        if (values.length) hallAnswers.set(hallCurrentIndex, values); else hallAnswers.delete(hallCurrentIndex);
+        hallRenderQuestion();
+        hallSaveProgress(true);
+      });
+      hallRenderQuestionList();
+      document.getElementById("hallPrevBtn").disabled = hallCurrentIndex === 0;
+      document.getElementById("hallNextBtn").disabled = hallCurrentIndex === hallQuestions.length - 1;
+    }
+
+    function hallRenderQuestionList() {
+      hallQuestionList.innerHTML = hallQuestions.map((_, index) => `<button type="button" class="${index === hallCurrentIndex ? "current" : ""} ${hallAnswers.has(index) ? "answered" : ""}" data-index="${index}">${index + 1}</button>`).join("");
+      hallQuestionList.querySelectorAll("button").forEach(button => button.onclick = () => { hallCurrentIndex = Number(button.dataset.index); hallRenderQuestion(); hallSaveProgress(false); });
+    }
+
+    function hallGoQuestion(delta) {
+      const next = hallCurrentIndex + delta;
+      if (next < 0 || next >= hallQuestions.length) return;
+      hallCurrentIndex = next;
+      hallRenderQuestion();
+      hallSaveProgress(false);
+    }
+
+    function hallSaveAndExit() {
+      clearInterval(hallTimerId);
+      hallSaveProgress(true);
+      hallUpdateResumeBox();
+      showAppScreen(hallSetupScreen);
+    }
+
+    async function hallFinishExam(auto = false) {
+      if (hallFinished || !hallQuestions.length) return;
+      if (!auto && !confirm(`Nộp bài với ${hallAnswers.size}/${hallQuestions.length} câu đã trả lời?`)) return;
+      hallFinished = true;
+      clearInterval(hallTimerId);
+      clearTimeout(hallSyncTimerId);
+      let correctCount = 0;
+      hallQuestions.forEach((q, index) => { if (isCorrectSelection(q, hallAnswers.get(index))) correctCount++; });
+      const total = hallQuestions.length;
+      const percent = total ? Math.round(correctCount * 10000 / total) / 100 : 0;
+      const elapsedSeconds = Math.max(0, Math.round((Date.now() - hallStartedAt) / 1000));
+      const result = { resultId: `${hallPlayer.playerId}-${Date.now()}`, playerId: hallPlayer.playerId, playerName: hallPlayer.name, category: hallCategory.value, total, correct: correctCount, percent, answered: hallAnswers.size, elapsedSeconds, startedAt: new Date(hallStartedAt).toISOString(), completedAt: new Date().toISOString(), autoSubmitted: auto, device: hallGetDeviceInfo() };
+      const localResults = hallReadStorage(HALL_RESULTS_KEY, []);
+      localResults.push(result);
+      hallWriteStorage(HALL_RESULTS_KEY, localResults.slice(-100));
+      localStorage.removeItem(HALL_PROGRESS_KEY);
+      hallResultSummary.innerHTML = `<div class="exam-result-summary"><div class="exam-result-stat"><span>Người chơi</span><b>${escapeHtml(hallPlayer.name)}</b></div><div class="exam-result-stat"><span>Kết quả</span><b>${correctCount}/${total}</b></div><div class="exam-result-stat"><span>Tỷ lệ đúng</span><b>${percent}%</b></div><div class="exam-result-stat"><span>Thời gian</span><b>${String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:${String(elapsedSeconds % 60).padStart(2, "0")}</b></div><div class="exam-evaluation">${auto ? "Hết giờ, hệ thống đã tự động nộp bài." : "Kết quả đã được lưu trên máy."}</div></div>`;
+      showAppScreen(hallResultScreen);
+      if (HALL_API_URL) {
+        try { await hallApiPost({ action: "finish", player: hallPlayer, result }); hallResultSummary.querySelector(".exam-evaluation").textContent += " Đã đồng bộ Google Sheets."; }
+        catch (_) { hallResultSummary.querySelector(".exam-evaluation").textContent += " Chưa đồng bộ được Google Sheets."; }
+      }
+    }
+
+    function hallLocalLeaderboard() {
+      const rows = hallReadStorage(HALL_RESULTS_KEY, []);
+      const best = new Map();
+      rows.forEach(row => { const old = best.get(row.playerId); if (!old || row.percent > old.percent || (row.percent === old.percent && row.correct > old.correct) || (row.percent === old.percent && row.correct === old.correct && row.elapsedSeconds < old.elapsedSeconds)) best.set(row.playerId, row); });
+      return [...best.values()].sort((a, b) => b.percent - a.percent || b.correct - a.correct || a.elapsedSeconds - b.elapsedSeconds).slice(0, 100);
+    }
+
+    function hallRenderLeaderboard(rows, source) {
+      hallRankingStatus.textContent = `${source} · ${rows.length} người chơi`;
+      hallRankingStatus.classList.remove("error");
+      hallRankingTable.innerHTML = rows.length ? `<table><thead><tr><th>Hạng</th><th>Người chơi</th><th>Mã</th><th>Kết quả</th><th>Tỷ lệ</th><th>Thời gian</th></tr></thead><tbody>${rows.map((row, index) => `<tr><td>${index + 1}</td><td>${escapeHtml(row.playerName || row.name || "")}</td><td>${escapeHtml(row.playerId || "")}</td><td>${Number(row.correct)}/${Number(row.total)}</td><td>${Number(row.percent).toFixed(2).replace(/\.00$/, "")}%</td><td>${String(Math.floor(Number(row.elapsedSeconds || 0) / 60)).padStart(2, "0")}:${String(Number(row.elapsedSeconds || 0) % 60).padStart(2, "0")}</td></tr>`).join("")}</tbody></table>` : "<div style='padding:20px;text-align:center'>Chưa có kết quả.</div>";
+    }
+
+    async function hallOpenLeaderboard() {
+      hallReturnScreen = document.querySelector(".app-screen.active") || hallSetupScreen;
+      showAppScreen(hallRankingScreen);
+      hallRankingStatus.textContent = "Đang tải bảng xếp hạng...";
+      if (!HALL_API_URL) return hallRenderLeaderboard(hallLocalLeaderboard(), "Xếp hạng trên máy này");
+      try {
+        const response = await fetch(`${HALL_API_URL}?action=leaderboard&_=${Date.now()}`);
+        const result = await response.json();
+        if (!result.ok) throw new Error(result.message || "Không tải được dữ liệu");
+        hallRenderLeaderboard(result.rows || [], "Xếp hạng chung");
+      } catch (error) {
+        hallRenderLeaderboard(hallLocalLeaderboard(), "Không kết nối được Google Sheets; đang hiển thị trên máy này");
+        hallRankingStatus.classList.add("error");
+      }
     }
 
     /* ==================== MÔ PHỎNG ĐỌC CÂU HỎI ==================== */
@@ -2635,6 +3068,7 @@ function syncQuestionListPage() {
       showAppScreen(round2Screen);
     };
     document.getElementById("openExamSetupBtn").onclick = () => { updateExamTotal(); showAppScreen(examSetupScreen); };
+    document.getElementById("openHallBtn").onclick = () => { hallRenderProfile(); hallInitCategories(); showAppScreen(hallSetupScreen); };
     document.getElementById("openMasterySetupBtn").onclick = () => { updateMasteryConfig(); showAppScreen(masterySetupScreen); };
     document.getElementById("openSimulationSetupBtn").onclick = () => {
       clearSimulationTimer();
@@ -2648,6 +3082,7 @@ function syncQuestionListPage() {
     document.getElementById("studyBackMenuBtn").onclick = () => showAppScreen(menuScreen);
     document.getElementById("round2BackMenuBtn").onclick = () => showAppScreen(menuScreen);
     document.querySelectorAll(".examBackMenu").forEach(button => button.onclick = () => showAppScreen(menuScreen));
+    document.querySelectorAll(".hallBackMenu").forEach(button => button.onclick = () => { clearInterval(hallTimerId); hallUpdateResumeBox(); showAppScreen(menuScreen); });
     document.querySelectorAll(".masteryBackMenu").forEach(button => button.onclick = () => {
       clearInterval(masteryTimerId);
       masteryTimerId = null;
@@ -2697,6 +3132,22 @@ function syncQuestionListPage() {
     document.getElementById("finishExamBtn").onclick = () => finishExam(false);
     // document.getElementById("restartExamBtn").onclick = () => { if (confirm("Làm lại bài thi từ đầu?")) startExam(); };
     document.getElementById("retryExamBtn").onclick = () => { updateExamTotal(); showAppScreen(examSetupScreen); };
+    hallRegisterBtn.onclick = hallRegister;
+    hallPlayerName.onkeydown = event => { if (event.key === "Enter") hallRegister(); };
+    hallCategory.onchange = hallUpdateConfig;
+    hallCount.oninput = hallUpdateConfig;
+    hallMinutes.oninput = hallUpdateConfig;
+    hallStartBtn.onclick = hallStartNewExam;
+    hallContinueBtn.onclick = hallContinueExam;
+    document.getElementById("hallPrevBtn").onclick = () => hallGoQuestion(-1);
+    document.getElementById("hallNextBtn").onclick = () => hallGoQuestion(1);
+    document.getElementById("hallSaveExitBtn").onclick = hallSaveAndExit;
+    document.getElementById("hallFinishBtn").onclick = () => hallFinishExam(false);
+    document.getElementById("hallRankingBtn").onclick = hallOpenLeaderboard;
+    document.getElementById("hallResultRankingBtn").onclick = hallOpenLeaderboard;
+    document.getElementById("hallRankingBackBtn").onclick = () => showAppScreen(hallReturnScreen === hallRankingScreen ? hallSetupScreen : hallReturnScreen);
+    document.getElementById("hallNewExamBtn").onclick = () => { hallRenderProfile(); hallInitCategories(); showAppScreen(hallSetupScreen); };
+    window.addEventListener("pagehide", () => hallSaveProgress(false));
     if ("speechSynthesis" in window) {
       window.speechSynthesis.addEventListener("voiceschanged", loadSimulationVoices);
       loadSimulationVoices();
@@ -2706,7 +3157,7 @@ function syncQuestionListPage() {
     });
     const dataDependentMenuButtons = [
       "openStudyBtn", "openRound2Btn", "openExamSetupBtn",
-      "openMasterySetupBtn", "openSimulationSetupBtn"
+      "openMasterySetupBtn", "openSimulationSetupBtn", "openHallBtn"
     ].map(id => document.getElementById(id));
 
     function setDataButtonsDisabled(disabled) {
@@ -2758,6 +3209,8 @@ function syncQuestionListPage() {
         updateMasteryConfig();
         initSimulationCategories();
         updateSimulationConfig();
+        hallRenderProfile();
+        hallInitCategories();
         setDataButtonsDisabled(false);
         showDataLoadMessage(`Đã nạp ${data.length.toLocaleString("vi-VN")} câu hỏi.`, false, true);
       } catch (error) {
