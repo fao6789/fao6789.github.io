@@ -963,6 +963,7 @@
     .hall-ranking tr:last-child td { border-bottom:0; }
     .hall-status { padding:10px 14px; border-radius:12px; background:#eff6ff; border:1px solid #bfdbfe; color:#1e3a8a; margin:12px 0; }
     .hall-status.error { background:#fff0f0; border-color:#e3aaaa; color:#a01818; }
+    .hall-question-note { padding:11px 14px; border-radius:12px; background:#eff6ff; border:1px solid #bfdbfe; color:#1e3a8a; margin:12px 0; line-height:1.55; }
     .hall-device { font-size:12px; color:var(--muted); line-height:1.6; overflow-wrap:anywhere; }
     .hall-name-row { display:grid; grid-template-columns:minmax(220px,1fr) auto; gap:10px; align-items:end; }
     .hall-resume { padding:14px; border-radius:14px; background:#f0fdf4; border:1px solid #86efac; margin:14px 0; }
@@ -1242,8 +1243,8 @@
     <div class="exam-config-grid">
       <div class="config-field"><label for="hallCategory">Danh mục</label><select id="hallCategory"></select></div>
       <div class="config-field"><label for="hallCount">Số lượng câu hỏi</label><input id="hallCount" type="number" min="1" value="50"></div>
-      <div class="config-field"><label for="hallMinutes">Thời gian thi (phút)</label><input id="hallMinutes" type="number" min="1" max="120" value="30"></div>
     </div>
+    <div class="hall-question-note" id="hallQuestionNote" aria-live="polite">Đang kiểm tra kho câu hỏi...</div>
     <div class="hall-resume" id="hallResumeBox" hidden></div>
     <div class="hall-status" id="hallStatus">Nhập tên để ghi danh. Không cần mật khẩu.</div>
     <div class="hall-actions">
@@ -1258,7 +1259,7 @@
     <div class="hall-exam-meta"><b id="hallPlayerLabel">Người chơi</b><b id="hallSyncLabel">Đã lưu trên máy</b></div>
     <div class="exam-header">
       <div><b id="hallProgressLabel">Câu 1/1</b><div id="hallAnsweredLabel">Đã làm: 0/0</div></div>
-      <div class="exam-timer" id="hallTimer">30:00</div>
+      <div class="exam-timer" id="hallTimer">00:00</div>
     </div>
     <div class="exam-layout">
       <div>
@@ -1972,7 +1973,7 @@ function syncQuestionListPage() {
     const hallRegisterBtn = document.getElementById("hallRegisterBtn");
     const hallCategory = document.getElementById("hallCategory");
     const hallCount = document.getElementById("hallCount");
-    const hallMinutes = document.getElementById("hallMinutes");
+    const hallQuestionNote = document.getElementById("hallQuestionNote");
     const hallResumeBox = document.getElementById("hallResumeBox");
     const hallStatus = document.getElementById("hallStatus");
     const hallStartBtn = document.getElementById("hallStartBtn");
@@ -2036,8 +2037,12 @@ function syncQuestionListPage() {
     let hallQuestions = [];
     let hallAnswers = new Map();
     let hallCurrentIndex = 0;
-    let hallDeadline = 0;
     let hallStartedAt = 0;
+    let hallElapsedMs = 0;
+    let hallActiveSince = 0;
+    let hallOfflineMs = 0;
+    let hallHiddenAt = 0;
+    let hallLeaveCount = 0;
     let hallTimerId = null;
     let hallSyncTimerId = null;
     let hallFinished = false;
@@ -2166,15 +2171,20 @@ function syncQuestionListPage() {
     }
 
     function hallUpdateConfig() {
+      const total = data.length;
       const available = hallAvailableQuestions().length;
       hallCount.max = Math.max(1, available);
-      const count = parseInt(hallCount.value, 10) || 0;
-      const minutes = parseInt(hallMinutes.value, 10) || 0;
-      const valid = !!hallPlayer && count >= 1 && count <= available && minutes >= 1 && minutes <= 120;
+      let count = parseInt(hallCount.value, 10) || 0;
+      if (available > 0 && count > available) {
+        count = available;
+        hallCount.value = String(available);
+      }
+      hallQuestionNote.innerHTML = `📌 Kho dữ liệu có <b>${total}</b> câu. Lựa chọn hiện tại có <b>${available}</b> câu; bài thi lấy <b>${count}</b> câu. Bài thi không giới hạn thời gian; hệ thống chỉ tính thời gian thực tế khi đang làm và lưu lại khi thoát ứng dụng.`;
+      const valid = !!hallPlayer && count >= 1 && count <= available;
       hallStartBtn.disabled = !valid;
       if (!hallPlayer) hallSetStatus("Nhập tên để ghi danh. Không cần mật khẩu.");
-      else if (!valid) hallSetStatus(`Có ${available} câu phù hợp. Số câu phải từ 1 đến ${available}; thời gian từ 1 đến 120 phút.`, true);
-      else hallSetStatus(`Sẵn sàng: ${count} câu · ${minutes} phút · ${available} câu có thể chọn.`);
+      else if (!valid) hallSetStatus(`Có ${available} câu phù hợp. Số câu phải từ 1 đến ${available}.`, true);
+      else hallSetStatus(`Sẵn sàng: ${count}/${available} câu · Không giới hạn thời gian · Có thể lưu và tiếp tục sau.`);
     }
 
     function hallRenderProfile() {
@@ -2223,8 +2233,9 @@ function syncQuestionListPage() {
     }
 
     function hallSerializeProgress() {
+      const elapsedMs = hallElapsedMs + (hallActiveSince ? Math.max(0, Date.now() - hallActiveSince) : 0);
       return {
-        version: 1,
+        version: 2,
         playerId: hallPlayer?.playerId || "",
         playerName: hallPlayer?.name || "",
         questionIndexes: hallQuestions.map(q => data.indexOf(q)),
@@ -2232,9 +2243,11 @@ function syncQuestionListPage() {
         currentIndex: hallCurrentIndex,
         category: hallCategory.value,
         count: hallQuestions.length,
-        minutes: Math.max(1, Math.round((hallDeadline - hallStartedAt) / 60000)),
         startedAt: hallStartedAt,
-        deadline: hallDeadline,
+        elapsedMs,
+        offlineMs: hallOfflineMs,
+        hiddenAt: hallHiddenAt,
+        leaveCount: hallLeaveCount,
         updatedAt: Date.now(),
         device: hallGetDeviceInfo()
       };
@@ -2264,7 +2277,9 @@ function syncQuestionListPage() {
       hallContinueBtn.hidden = !valid;
       if (valid) {
         const answered = Object.keys(progress.answers || {}).length;
-        hallResumeBox.innerHTML = `<b>Có bài chưa hoàn thành:</b> ${answered}/${progress.questionIndexes.length} câu · ${escapeHtml(progress.category === "__ALL__" ? "Tất cả danh mục" : progress.category)} · lưu lúc ${new Date(progress.updatedAt).toLocaleString("vi-VN")}.`;
+        const elapsedSeconds = Math.max(0, Math.round(Number(progress.elapsedMs || 0) / 1000));
+        const elapsedText = `${String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:${String(elapsedSeconds % 60).padStart(2, "0")}`;
+        hallResumeBox.innerHTML = `<b>Có bài chưa hoàn thành:</b> ${answered}/${progress.questionIndexes.length} câu · đã làm ${elapsedText} · rời ứng dụng ${Number(progress.leaveCount || 0)} lần · ${escapeHtml(progress.category === "__ALL__" ? "Tất cả danh mục" : progress.category)} · lưu lúc ${new Date(progress.updatedAt).toLocaleString("vi-VN")}.`;
       }
     }
 
@@ -2272,14 +2287,17 @@ function syncQuestionListPage() {
       if (!hallPlayer || hallStartBtn.disabled) return;
       const available = hallAvailableQuestions();
       const count = parseInt(hallCount.value, 10);
-      const minutes = parseInt(hallMinutes.value, 10);
       const old = hallReadStorage(HALL_PROGRESS_KEY, null);
       if (old && !confirm("Bắt đầu bài mới sẽ thay thế bài đang lưu. Tiếp tục?")) return;
       hallQuestions = shuffled(available).slice(0, count);
       hallAnswers = new Map();
       hallCurrentIndex = 0;
       hallStartedAt = Date.now();
-      hallDeadline = hallStartedAt + minutes * 60000;
+      hallElapsedMs = 0;
+      hallActiveSince = 0;
+      hallOfflineMs = 0;
+      hallHiddenAt = 0;
+      hallLeaveCount = 0;
       hallFinished = false;
       hallPlayerLabel.textContent = `${hallPlayer.name} · ${hallPlayer.playerId}`;
       showAppScreen(hallExamScreen);
@@ -2296,24 +2314,42 @@ function syncQuestionListPage() {
       hallAnswers = new Map(Object.entries(progress.answers || {}).map(([key, value]) => [Number(key), value]));
       hallCurrentIndex = Math.min(progress.currentIndex || 0, hallQuestions.length - 1);
       hallStartedAt = progress.startedAt || Date.now();
-      hallDeadline = progress.deadline || Date.now();
+      hallElapsedMs = Math.max(0, Number(progress.elapsedMs || 0));
+      hallOfflineMs = Math.max(0, Number(progress.offlineMs || 0));
+      hallLeaveCount = Math.max(0, Number(progress.leaveCount || 0));
+      if (progress.hiddenAt) hallOfflineMs += Math.max(0, Date.now() - Number(progress.hiddenAt));
+      hallHiddenAt = 0;
+      hallActiveSince = 0;
       if ([...hallCategory.options].some(option => option.value === progress.category)) hallCategory.value = progress.category;
       hallFinished = false;
       hallPlayerLabel.textContent = `${hallPlayer.name} · ${hallPlayer.playerId}`;
       showAppScreen(hallExamScreen);
-      if (hallDeadline <= Date.now()) hallFinishExam(true); else { hallStartTimer(); hallRenderQuestion(); }
+      hallStartTimer();
+      hallRenderQuestion();
     }
 
     function hallRenderTimer() {
-      const seconds = Math.max(0, Math.ceil((hallDeadline - Date.now()) / 1000));
+      const elapsed = hallElapsedMs + (hallActiveSince ? Math.max(0, Date.now() - hallActiveSince) : 0);
+      const seconds = Math.max(0, Math.floor(elapsed / 1000));
       hallTimer.textContent = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
       return seconds;
     }
 
     function hallStartTimer() {
       clearInterval(hallTimerId);
+      if (!hallActiveSince) hallActiveSince = Date.now();
       hallRenderTimer();
-      hallTimerId = setInterval(() => { if (hallRenderTimer() <= 0) hallFinishExam(true); }, 1000);
+      hallTimerId = setInterval(hallRenderTimer, 1000);
+    }
+
+    function hallPauseTimer(countLeave = false) {
+      clearInterval(hallTimerId);
+      if (hallActiveSince) {
+        hallElapsedMs += Math.max(0, Date.now() - hallActiveSince);
+        hallActiveSince = 0;
+      }
+      if (countLeave) hallLeaveCount++;
+      hallRenderTimer();
     }
 
     function hallRenderQuestion() {
@@ -2352,7 +2388,8 @@ function syncQuestionListPage() {
     }
 
     function hallSaveAndExit() {
-      clearInterval(hallTimerId);
+      hallPauseTimer(true);
+      hallHiddenAt = Date.now();
       hallSaveProgress(true);
       hallUpdateResumeBox();
       showAppScreen(hallSetupScreen);
@@ -2362,19 +2399,20 @@ function syncQuestionListPage() {
       if (hallFinished || !hallQuestions.length) return;
       if (!auto && !confirm(`Nộp bài với ${hallAnswers.size}/${hallQuestions.length} câu đã trả lời?`)) return;
       hallFinished = true;
-      clearInterval(hallTimerId);
+      hallPauseTimer(false);
       clearTimeout(hallSyncTimerId);
       let correctCount = 0;
       hallQuestions.forEach((q, index) => { if (isCorrectSelection(q, hallAnswers.get(index))) correctCount++; });
       const total = hallQuestions.length;
       const percent = total ? Math.round(correctCount * 10000 / total) / 100 : 0;
-      const elapsedSeconds = Math.max(0, Math.round((Date.now() - hallStartedAt) / 1000));
-      const result = { resultId: `${hallPlayer.playerId}-${Date.now()}`, playerId: hallPlayer.playerId, playerName: hallPlayer.name, category: hallCategory.value, total, correct: correctCount, percent, answered: hallAnswers.size, elapsedSeconds, startedAt: new Date(hallStartedAt).toISOString(), completedAt: new Date().toISOString(), autoSubmitted: auto, device: hallGetDeviceInfo() };
+      const elapsedSeconds = Math.max(0, Math.round(hallElapsedMs / 1000));
+      const offlineSeconds = Math.max(0, Math.round(hallOfflineMs / 1000));
+      const result = { resultId: `${hallPlayer.playerId}-${Date.now()}`, playerId: hallPlayer.playerId, playerName: hallPlayer.name, category: hallCategory.value, total, correct: correctCount, percent, answered: hallAnswers.size, elapsedSeconds, offlineSeconds, leaveCount: hallLeaveCount, startedAt: new Date(hallStartedAt).toISOString(), completedAt: new Date().toISOString(), autoSubmitted: auto, device: hallGetDeviceInfo() };
       const localResults = hallReadStorage(HALL_RESULTS_KEY, []);
       localResults.push(result);
       hallWriteStorage(HALL_RESULTS_KEY, localResults.slice(-100));
       localStorage.removeItem(HALL_PROGRESS_KEY);
-      hallResultSummary.innerHTML = `<div class="exam-result-summary"><div class="exam-result-stat"><span>Người chơi</span><b>${escapeHtml(hallPlayer.name)}</b></div><div class="exam-result-stat"><span>Kết quả</span><b>${correctCount}/${total}</b></div><div class="exam-result-stat"><span>Tỷ lệ đúng</span><b>${percent}%</b></div><div class="exam-result-stat"><span>Thời gian</span><b>${String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:${String(elapsedSeconds % 60).padStart(2, "0")}</b></div><div class="exam-evaluation">${auto ? "Hết giờ, hệ thống đã tự động nộp bài." : "Kết quả đã được lưu trên máy."}</div></div>`;
+      hallResultSummary.innerHTML = `<div class="exam-result-summary"><div class="exam-result-stat"><span>Người chơi</span><b>${escapeHtml(hallPlayer.name)}</b></div><div class="exam-result-stat"><span>Kết quả</span><b>${correctCount}/${total}</b></div><div class="exam-result-stat"><span>Tỷ lệ đúng</span><b>${percent}%</b></div><div class="exam-result-stat"><span>Thời gian làm thực tế</span><b>${String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:${String(elapsedSeconds % 60).padStart(2, "0")}</b></div><div class="exam-result-stat"><span>Số lần rời ứng dụng</span><b>${hallLeaveCount}</b></div><div class="exam-result-stat"><span>Thời gian ngoại tuyến</span><b>${String(Math.floor(offlineSeconds / 60)).padStart(2, "0")}:${String(offlineSeconds % 60).padStart(2, "0")}</b></div><div class="exam-evaluation">Kết quả và thời gian làm thực tế đã được lưu trên máy.</div></div>`;
       showAppScreen(hallResultScreen);
       if (HALL_API_URL) {
         try { await hallApiPost({ action: "finish", player: hallPlayer, result }); hallResultSummary.querySelector(".exam-evaluation").textContent += " Đã đồng bộ Google Sheets."; }
@@ -2385,14 +2423,20 @@ function syncQuestionListPage() {
     function hallLocalLeaderboard() {
       const rows = hallReadStorage(HALL_RESULTS_KEY, []);
       const best = new Map();
-      rows.forEach(row => { const old = best.get(row.playerId); if (!old || row.percent > old.percent || (row.percent === old.percent && row.correct > old.correct) || (row.percent === old.percent && row.correct === old.correct && row.elapsedSeconds < old.elapsedSeconds)) best.set(row.playerId, row); });
-      return [...best.values()].sort((a, b) => b.percent - a.percent || b.correct - a.correct || a.elapsedSeconds - b.elapsedSeconds).slice(0, 100);
+      rows.forEach(row => {
+        const old = best.get(row.playerId);
+        if (!old || row.percent > old.percent ||
+          (row.percent === old.percent && row.correct > old.correct) ||
+          (row.percent === old.percent && row.correct === old.correct && Number(row.leaveCount || 0) < Number(old.leaveCount || 0)) ||
+          (row.percent === old.percent && row.correct === old.correct && Number(row.leaveCount || 0) === Number(old.leaveCount || 0) && row.elapsedSeconds < old.elapsedSeconds)) best.set(row.playerId, row);
+      });
+      return [...best.values()].sort((a, b) => b.percent - a.percent || b.correct - a.correct || Number(a.leaveCount || 0) - Number(b.leaveCount || 0) || a.elapsedSeconds - b.elapsedSeconds).slice(0, 100);
     }
 
     function hallRenderLeaderboard(rows, source) {
       hallRankingStatus.textContent = `${source} · ${rows.length} người chơi`;
       hallRankingStatus.classList.remove("error");
-      hallRankingTable.innerHTML = rows.length ? `<table><thead><tr><th>Hạng</th><th>Người chơi</th><th>Mã</th><th>Kết quả</th><th>Tỷ lệ</th><th>Thời gian</th></tr></thead><tbody>${rows.map((row, index) => `<tr><td>${index + 1}</td><td>${escapeHtml(row.playerName || row.name || "")}</td><td>${escapeHtml(row.playerId || "")}</td><td>${Number(row.correct)}/${Number(row.total)}</td><td>${Number(row.percent).toFixed(2).replace(/\.00$/, "")}%</td><td>${String(Math.floor(Number(row.elapsedSeconds || 0) / 60)).padStart(2, "0")}:${String(Number(row.elapsedSeconds || 0) % 60).padStart(2, "0")}</td></tr>`).join("")}</tbody></table>` : "<div style='padding:20px;text-align:center'>Chưa có kết quả.</div>";
+      hallRankingTable.innerHTML = rows.length ? `<table><thead><tr><th>Hạng</th><th>Người chơi</th><th>Mã</th><th>Kết quả</th><th>Tỷ lệ</th><th>Rời ứng dụng</th><th>Thời gian làm</th></tr></thead><tbody>${rows.map((row, index) => `<tr><td>${index + 1}</td><td>${escapeHtml(row.playerName || row.name || "")}</td><td>${escapeHtml(row.playerId || "")}</td><td>${Number(row.correct)}/${Number(row.total)}</td><td>${Number(row.percent).toFixed(2).replace(/\.00$/, "")}%</td><td>${Number(row.leaveCount || 0)} lần</td><td>${String(Math.floor(Number(row.elapsedSeconds || 0) / 60)).padStart(2, "0")}:${String(Number(row.elapsedSeconds || 0) % 60).padStart(2, "0")}</td></tr>`).join("")}</tbody></table>` : "<div style='padding:20px;text-align:center'>Chưa có kết quả.</div>";
     }
 
     async function hallOpenLeaderboard() {
@@ -3138,7 +3182,6 @@ function syncQuestionListPage() {
     hallPlayerName.onkeydown = event => { if (event.key === "Enter") hallRegister(); };
     hallCategory.onchange = hallUpdateConfig;
     hallCount.oninput = hallUpdateConfig;
-    hallMinutes.oninput = hallUpdateConfig;
     hallStartBtn.onclick = hallStartNewExam;
     hallContinueBtn.onclick = hallContinueExam;
     document.getElementById("hallPrevBtn").onclick = () => hallGoQuestion(-1);
@@ -3149,13 +3192,27 @@ function syncQuestionListPage() {
     document.getElementById("hallResultRankingBtn").onclick = hallOpenLeaderboard;
     document.getElementById("hallRankingBackBtn").onclick = () => showAppScreen(hallReturnScreen === hallRankingScreen ? hallSetupScreen : hallReturnScreen);
     document.getElementById("hallNewExamBtn").onclick = () => { hallRenderProfile(); hallInitCategories(); showAppScreen(hallSetupScreen); };
-    window.addEventListener("pagehide", () => hallSaveProgress(false));
+    function hallHandleHidden() {
+      if (!hallExamScreen.classList.contains("active") || hallFinished || !hallQuestions.length || hallHiddenAt) return;
+      hallPauseTimer(true);
+      hallHiddenAt = Date.now();
+      hallSaveProgress(false);
+    }
+    window.addEventListener("pagehide", hallHandleHidden);
     if ("speechSynthesis" in window) {
       window.speechSynthesis.addEventListener("voiceschanged", loadSimulationVoices);
       loadSimulationVoices();
     }
     document.addEventListener("visibilitychange", () => {
       if (document.hidden && simulationScreen.classList.contains("active") && ["READING", "COUNTDOWN"].includes(simulationState)) pauseSimulation();
+      if (document.hidden) {
+        hallHandleHidden();
+      } else if (hallExamScreen.classList.contains("active") && !hallFinished && hallQuestions.length && hallHiddenAt) {
+        hallOfflineMs += Math.max(0, Date.now() - hallHiddenAt);
+        hallHiddenAt = 0;
+        hallStartTimer();
+        hallSaveProgress(false);
+      }
     });
     const dataDependentMenuButtons = [
       "openStudyBtn", "openRound2Btn", "openExamSetupBtn",
